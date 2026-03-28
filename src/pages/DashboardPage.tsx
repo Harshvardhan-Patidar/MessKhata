@@ -33,8 +33,11 @@ export const DashboardPage = () => {
   const fetchCustomers = async () => {
     setLoading(true);
 
-    // Auto update expired / archived
-    await supabase.rpc('auto_update_expired_and_archived');
+    // Auto update expired/archived AND hard-delete users expired for 3+ months (runs in parallel)
+    await Promise.all([
+      supabase.rpc('auto_update_expired_and_archived'),
+      supabase.rpc('delete_stale_users'),
+    ]);
 
     let query = supabase
       .from('customers')

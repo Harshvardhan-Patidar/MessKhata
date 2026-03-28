@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MessageCircle, PhoneCall } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { supabase } from '../lib/supabaseClient';
@@ -45,13 +46,23 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
   const canEat = remaining > 0 && isValidExpiry && customer.status === 'active';
   const isExpiredNow = !canEat;
 
+  const [isEating, setIsEating] = useState(false);
+  const [eatError, setEatError] = useState<string | null>(null);
+
   const handleEat = async () => {
-    if (!canEat) return;
+    if (!canEat || isEating) return;
+    setEatError(null);
+    setIsEating(true);
     const { data, error } = await supabase.rpc('consume_plate', {
       p_customer_id: customer.id,
       p_count: 1,
     });
-    if (!error && data) {
+    setIsEating(false);
+    if (error) {
+      setEatError(error.message);
+      return;
+    }
+    if (data) {
       // consume_plate returns the updated customer row
       onEatUpdated(data as Customer);
     }
@@ -148,15 +159,21 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
 
           <button
             onClick={handleEat}
-            disabled={!canEat}
-            className={`px-4 py-2 rounded-lg text-lg font-bold w-28 text-lime-50 ${
-              canEat
-                ? 'bg-primary hover:bg-green-600 text-black'
+            disabled={!canEat || isEating}
+            className={`px-4 py-2 rounded-lg text-lg font-bold w-28 ${
+              canEat && !isEating
+                ? 'bg-primary hover:bg-green-600 text-white'
                 : 'bg-slate-700 text-slate-400 cursor-not-allowed'
             }`}
           >
-            EAT
+            {isEating ? '…' : 'EAT'}
           </button>
+
+          {eatError && (
+            <p className="text-[10px] text-red-400 text-right max-w-[7rem] leading-tight">
+              {eatError}
+            </p>
+          )}
 
           <button
             onClick={onRenew}
