@@ -200,10 +200,18 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
               Lifetime total: {customer.total_plates}
             </p>
           )}
-          {/* Daily meal tracker */}
-          <p className="text-[11px] text-slate-500 mt-0.5">
+          {/* Daily meal tracker */}  
+          {/* <p className="text-[11px] text-slate-500 mt-0.5">
             Meals today: {mealsToday}/3
-          </p>
+          </p> */}
+
+          {/* Plates today counter: EAT increases, +1 More decreases */}
+          <div className="mt-1.5 flex items-baseline gap-1">
+            <span className="text-2xl font-extrabold text-amber-400 leading-none">
+              {mealsToday - platesAddedToday}
+            </span>
+            <span className="text-[10px] text-slate-400">plates today</span>
+          </div>
         </div>
 
         <div className="flex flex-col items-end gap-2">

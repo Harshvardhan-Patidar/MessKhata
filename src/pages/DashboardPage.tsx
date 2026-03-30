@@ -83,10 +83,15 @@ export const DashboardPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, filter]);
 
-  const mealsToday = useMemo(() => {
-    // This is a client-only approximation. You can also create an RPC from logs.
-    return '—';
-  }, []);
+  const totalPlatesServedToday = useMemo(() => {
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    return customers.reduce((sum, c) => {
+      if (c.last_active_date !== todayStr) return sum;
+      const meals = c.meals_consumed_today ?? 0;
+      const added = c.plates_added_today ?? 0;
+      return sum + meals - added; // EAT ↑, +1 More ↓
+    }, 0);
+  }, [customers]);
 
   const handleOpenRenew = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -128,8 +133,8 @@ export const DashboardPage = () => {
         {/* Top stats */}
         <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div className="bg-slate-900/80 rounded-xl p-3">
-            <p className="text-xs text-slate-400">Meals today</p>
-            <p className="text-xl font-bold text-primary">{mealsToday}</p>
+            <p className="text-xs text-slate-400">Plates today</p>
+            <p className="text-xl font-bold text-primary">{totalPlatesServedToday}</p>
           </div>
           <div className="bg-slate-900/80 rounded-xl p-3">
             <p className="text-xs text-slate-400">Customers</p>
