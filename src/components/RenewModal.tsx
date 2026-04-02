@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
+import type { Customer } from './CustomerCard';
+
 type Props = {
   open: boolean;
   onClose: () => void;
-  onUpdated: () => void;
+  onUpdated: (customer: Customer) => void;
   customer: {
     id: string;
     full_name: string;
@@ -42,7 +44,7 @@ export const RenewModal = ({ open, onClose, onUpdated, customer }: Props) => {
       return;
     }
 
-    const { error } = await supabase.rpc('renew_plan', {
+    const { data, error } = await supabase.rpc('renew_plan', {
       p_customer_id: customer.id,
       p_additional_plates: plates,
       p_new_expiry: hasExpiry && expiryDate ? new Date(expiryDate).toISOString() : null,
@@ -57,7 +59,9 @@ export const RenewModal = ({ open, onClose, onUpdated, customer }: Props) => {
     setAdditionalPlates('');
     setHasExpiry(false);
     setExpiryDate('');
-    onUpdated();
+    if (data) {
+      onUpdated(data as Customer);
+    }
     onClose();
   };
 

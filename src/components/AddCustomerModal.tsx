@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, RefreshCw, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
+import type { Customer } from './CustomerCard';
+
 type Props = {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (customer: Customer) => void;
 };
 
 type PlanPreset = '30' | '56' | 'custom';
@@ -185,7 +187,7 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
       uploadedPhotoUrl = urlData.publicUrl;
     }
 
-    const { error } = await supabase.from('customers').insert({
+    const { data: newCustomer, error } = await supabase.from('customers').insert({
       customer_code: customerCode.trim(),
       full_name: name.trim(),
       mobile: mobile.trim(),
@@ -195,13 +197,13 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
       remaining_plates: plates,
       plan_expiry_date: hasExpiry && expiryDate ? new Date(expiryDate).toISOString() : null,
       status: 'active',
-    });
+    }).select('*').single();
 
     setLoading(false);
     if (error) { setError(error.message); return; }
 
     reset();
-    onCreated();
+    onCreated(newCustomer as Customer);
     onClose();
   };
 

@@ -206,13 +206,18 @@ export const DashboardPage = () => {
       <AddCustomerModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        onCreated={fetchCustomers}
+        onCreated={(newCustomer) => {
+          setCustomers(prev => {
+            const list = [...prev, newCustomer];
+            return list.sort((a, b) => a.full_name.localeCompare(b.full_name));
+          });
+        }}
       />
 
       <RenewModal
         open={renewOpen}
         onClose={() => setRenewOpen(false)}
-        onUpdated={fetchCustomers}
+        onUpdated={handleEatUpdated}
         customer={
           selectedCustomer && {
             id: selectedCustomer.id,
