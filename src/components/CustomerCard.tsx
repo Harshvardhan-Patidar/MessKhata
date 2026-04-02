@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MessageCircle, PhoneCall } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { supabase } from '../lib/supabaseClient';
@@ -23,12 +24,24 @@ export type Customer = {
    * Falls back to total_plates if not present (for older rows)
    */
   current_plan_total?: number | null;
+  /**
+   * How many meals this customer has eaten today (resets each calendar day)
+   */
+  meals_consumed_today: number | null;
+  /**
+   * How many +1 plate additions have been done today (max 1/day)
+   */
+  plates_added_today: number | null;
+  /**
+   * The last date daily counters were active (used to detect a new day)
+   */
+  last_active_date: string | null;
 };
 
 type Props = {
   customer: Customer;
   /**
-   * Called after a successful EAT operation with the updated customer row.
+   * Called after a successful EAT or +1 More operation with the updated customer row.
    * This lets the parent update only that one customer in state.
    */
   onEatUpdated: (updated: Customer) => void;
@@ -42,26 +55,70 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
   const now = new Date();
 
   const isValidExpiry = !expiry || isAfter(expiry, now);
-  const canEat = remaining > 0 && isValidExpiry && customer.status === 'active';
-  const isExpiredNow = !canEat;
+
+  // Detect if daily counters need to be treated as reset (new day)
+  // Use IST (Asia/Kolkata) date so the reset aligns with midnight IST, not UTC
+  const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // 'YYYY-MM-DD'
+  const isToday = customer.last_active_date === todayStr;
+  const mealsToday = isToday ? (customer.meals_consumed_today ?? 0) : 0;
+  const platesAddedToday = isToday ? (customer.plates_added_today ?? 0) : 0;
+
+  const canEat =
+    customer.status === 'active' &&
+    remaining > 0 &&
+    isValidExpiry &&
+    mealsToday < 3;
+
+  // +1 More: only after all 3 meals eaten today, and only once per day
+  const canAddPlate =
+    customer.status === 'active' &&
+    isValidExpiry &&
+    mealsToday >= 3 &&
+    platesAddedToday < 1;
+
+  const isExpiredNow = customer.status !== 'active';
+
+  const [isEating, setIsEating] = useState(false);
+  const [eatError, setEatError] = useState<string | null>(null);
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const handleEat = async () => {
-    if (!canEat) return;
+    if (!canEat || isEating) return;
+    setEatError(null);
+    setIsEating(true);
     const { data, error } = await supabase.rpc('consume_plate', {
       p_customer_id: customer.id,
       p_count: 1,
     });
-    if (!error && data) {
-      // consume_plate returns the updated customer row
+    setIsEating(false);
+    if (error) {
+      setEatError(error.message);
+      return;
+    }
+    if (data) {
       onEatUpdated(data as Customer);
     }
   };
 
-  const waLink = `https://wa.me/91${customer.mobile}?text=${encodeURIComponent(
-    `Hello ${customer.full_name}, your mess plan is over. Please renew.`
-  )}`;
-
-  const showWhatsApp = isExpiredNow;
+  const handleAddPlate = async () => {
+    if (!canAddPlate || isAdding) return;
+    setAddError(null);
+    setIsAdding(true);
+    const { data, error } = await supabase.rpc('add_plate', {
+      p_customer_id: customer.id,
+      p_count: 1,
+    });
+    setIsAdding(false);
+    if (error) {
+      setAddError(error.message);
+      return;
+    }
+    if (data) {
+      onEatUpdated(data as Customer);
+    }
+  };
 
   const handleArchive = async () => {
     const { error } = await supabase
@@ -70,6 +127,10 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
       .eq('id', customer.id);
     if (!error) onArchive();
   };
+
+  const waLink = `https://wa.me/91${customer.mobile}?text=${encodeURIComponent(
+    `Hello ${customer.full_name}, your mess plan is over. Please renew.`
+  )}`;
 
   const statusColor =
     customer.status === 'active'
@@ -80,6 +141,7 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
 
   return (
     <div className="bg-slate-900/80 rounded-2xl p-4 flex flex-col gap-3 shadow-lg">
+      {/* ── Top row: avatar + info + WhatsApp ── */}
       <div className="flex items-center gap-3">
         <img
           src={
@@ -110,7 +172,7 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
             </p>
           )}
         </div>
-        {showWhatsApp && (
+        {isExpiredNow && (
           <button
             onClick={() => window.open(waLink, '_blank')}
             className="text-green-400 hover:text-green-300"
@@ -121,24 +183,35 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
         )}
       </div>
 
-      <div className="flex items-center justify-between">
+      {/* ── Mid row: plates + status badge ── */}
+      <div className="flex items-start justify-between">
         <div>
           <p className="text-xs text-slate-400">Remaining Plates</p>
           <p className={`text-3xl font-extrabold ${canEat ? 'text-primary' : 'text-red-500'}`}>
             {remaining}
           </p>
-          {/* Current plan total (fallback to lifetime if current_plan_total is undefined) */}
-          {typeof (customer.current_plan_total ?? customer.total_plates) === 'number' && (
+          {/* {typeof (customer.current_plan_total ?? customer.total_plates) === 'number' && (
             <p className="text-[11px] text-slate-500">
               Plan total: {customer.current_plan_total ?? customer.total_plates}
             </p>
-          )}
-          {/* Lifetime total across all renewals */}
+          )} */}
           {typeof customer.total_plates === 'number' && (
             <p className="text-[11px] text-slate-500">
               Lifetime total: {customer.total_plates}
             </p>
           )}
+          {/* Daily meal tracker */}  
+          {/* <p className="text-[11px] text-slate-500 mt-0.5">
+            Meals today: {mealsToday}/3
+          </p> */}
+
+          {/* Plates today counter: EAT increases, +1 More decreases */}
+          <div className="mt-1.5 flex items-baseline gap-1">
+            <span className="text-2xl font-extrabold text-amber-400 leading-none">
+              {mealsToday - platesAddedToday}
+            </span>
+            <span className="text-[10px] text-slate-400">plates today</span>
+          </div>
         </div>
 
         <div className="flex flex-col items-end gap-2">
@@ -146,21 +219,34 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
             {customer.status}
           </span>
 
+          {/* +1 More button — replaces EAT in this slot */}
           <button
-            onClick={handleEat}
-            disabled={!canEat}
-            className={`px-4 py-2 rounded-lg text-lg font-bold w-28 text-lime-50 ${
-              canEat
-                ? 'bg-primary hover:bg-green-600 text-black'
-                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+            onClick={handleAddPlate}
+            disabled={!canAddPlate || isAdding}
+            title={
+              mealsToday < 3
+                ? 'Available after customer eats all 3 meals today'
+                : platesAddedToday >= 1
+                ? 'Already added a plate today'
+                : '+1 plate'
+            }
+            className={`px-4 py-2 rounded-lg text-sm font-bold w-28 transition-colors ${
+              canAddPlate && !isAdding
+                ? 'bg-amber-500 hover:bg-amber-400 text-black'
+                : 'bg-slate-700 text-slate-500 cursor-not-allowed'
             }`}
           >
-            EAT
+            {isAdding ? '…' : '+1 More'}
           </button>
+          {addError && (
+            <p className="text-[10px] text-red-400 text-right max-w-[7rem] leading-tight">
+              {addError}
+            </p>
+          )}
 
           <button
             onClick={onRenew}
-            className="px-4 py-1 rounded-lg text-sm font-semibold bg-amber-500 text-black hover:bg-amber-400 w-28"
+            className="px-4 py-1 rounded-lg text-sm font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 w-28"
           >
             RENEW
           </button>
@@ -169,10 +255,28 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
             onClick={handleArchive}
             className="px-4 py-1 rounded-lg text-[11px] bg-slate-800 text-slate-300 hover:bg-slate-700 w-28"
           >
-            Remove (Archive)
+            Remove
           </button>
         </div>
       </div>
+
+      {/* ── Bottom: EAT button full-width green ── */}
+      <button
+        onClick={handleEat}
+        disabled={!canEat || isEating}
+        className={`w-full py-3 rounded-xl text-lg font-bold tracking-wide transition-colors ${
+          canEat && !isEating
+            ? 'bg-green-600 hover:bg-green-500 active:bg-green-700 text-white'
+            : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+        }`}
+      >
+        {isEating ? 'Please wait…' : mealsToday >= 3 ? 'EAT (limit reached today)' : `EAT  (${mealsToday}/3)`}
+      </button>
+      {eatError && (
+        <p className="text-[10px] text-red-400 text-center leading-tight -mt-1">
+          {eatError}
+        </p>
+      )}
     </div>
   );
 };
