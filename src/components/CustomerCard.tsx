@@ -190,11 +190,11 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
           <p className={`text-3xl font-extrabold ${canEat ? 'text-primary' : 'text-red-500'}`}>
             {remaining}
           </p>
-          {typeof (customer.current_plan_total ?? customer.total_plates) === 'number' && (
+          {/* {typeof (customer.current_plan_total ?? customer.total_plates) === 'number' && (
             <p className="text-[11px] text-slate-500">
               Plan total: {customer.current_plan_total ?? customer.total_plates}
             </p>
-          )}
+          )} */}
           {typeof customer.total_plates === 'number' && (
             <p className="text-[11px] text-slate-500">
               Lifetime total: {customer.total_plates}

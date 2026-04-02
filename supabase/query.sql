@@ -1,3 +1,5 @@
+-- All sql editor command for initial setup of mess khata (run all at once)
+
 -- Plan type enum
 create type plan_type_enum as enum ('fixed_plates', 'unlimited_time');
 
