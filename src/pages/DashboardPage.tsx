@@ -4,8 +4,10 @@ import type { Customer } from '../components/CustomerCard';
 import { CustomerCard } from '../components/CustomerCard';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { RenewModal } from '../components/RenewModal';
+import type { MenuData } from '../components/MenuModal';
+import { MenuModal } from '../components/MenuModal';
 import { useAuth } from '../context/AuthContext';
-import { Search } from 'lucide-react';
+import { Search, Utensils, Trash2 } from 'lucide-react';
 
 type Filter = 'all' | 'active' | 'expiring' | 'expired' | 'archived';
 
@@ -24,11 +26,48 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+
+  // Modals state
   const [addOpen, setAddOpen] = useState(false);
   const [renewOpen, setRenewOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
+  // Menu state
+  const [menuData, setMenuData] = useState<MenuData | null>(null);
+
   const debouncedSearch = useDebouncedValue(search, 300);
+
+  // Load menu from localStorage on mount
+  useEffect(() => {
+    const storedMenu = localStorage.getItem('messkhata_daily_menu');
+    if (storedMenu) {
+      try {
+        const parsed = JSON.parse(storedMenu);
+        // Handle migration from old array format
+        if (Array.isArray(parsed)) {
+          setMenuData({ morning: parsed, evening: [] });
+        } else {
+          setMenuData(parsed);
+        }
+      } catch (e) {
+        console.error('Failed to parse menu from localStorage', e);
+      }
+    }
+  }, []);
+
+  const handleSaveMenu = (data: MenuData) => {
+    setMenuData(data);
+    localStorage.setItem('messkhata_daily_menu', JSON.stringify(data));
+  };
+
+  const handleDeleteMenu = () => {
+    if (window.confirm('Are you sure you want to clear the daily menus?')) {
+      setMenuData(null);
+      localStorage.removeItem('messkhata_daily_menu');
+    }
+  };
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -106,6 +145,15 @@ export const DashboardPage = () => {
     );
   };
 
+  // Determine active menu based on time
+  // 5 AM to 4:59 PM -> Morning
+  // 5 PM to 4:59 AM -> Evening
+  const currentHour = new Date().getHours();
+  const isMorning = currentHour >= 5 && currentHour < 17;
+  const activeMenuTitle = isMorning ? "🌅 Morning Menu" : "🌆 Evening Menu";
+  const activeMenuItems = isMorning ? menuData?.morning || [] : menuData?.evening || [];
+  const hasAnyMenu = menuData && (menuData.morning.length > 0 || menuData.evening.length > 0);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
       <header className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between gap-3">
@@ -115,10 +163,17 @@ export const DashboardPage = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setAddOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-primary text-red-500 text-sm font-semibold"
+            onClick={() => setMenuOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-slate-800 text-amber-400 text-sm font-semibold flex items-center gap-1 hover:bg-slate-700"
           >
-            + Add Customer
+            <Utensils className="w-4 h-4" />
+            <span className="hidden sm:inline">{hasAnyMenu ? 'Update Menu' : 'Add Menu'}</span>
+          </button>
+          <button
+            onClick={() => setAddOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-slate-800 text-amber-400 text-sm font-semibold flex items-center gap-1 hover:bg-slate-700"
+          >
+            + <span className="hidden sm:inline">Add Customer</span>
           </button>
           <button
             onClick={signOut}
@@ -150,6 +205,44 @@ export const DashboardPage = () => {
           </div>
         </section>
 
+        {/* Daily Menu Card */}
+        {hasAnyMenu && (
+          <section className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 flex justify-between items-start gap-4">
+            <div className="flex-1">
+              <h2 className="text-sm font-bold text-amber-400 mb-2 flex items-center gap-2">
+                <Utensils className="w-4 h-4" /> {activeMenuTitle}
+              </h2>
+              {activeMenuItems.length > 0 ? (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
+                  {activeMenuItems.map((item, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm text-slate-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500/50" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-500">No items listed for this shift.</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 shrink-0">
+              <button
+                onClick={() => setMenuOpen(true)}
+                className="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg"
+              >
+                Edit All
+              </button>
+              <button
+                onClick={handleDeleteMenu}
+                className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg flex items-center justify-center transition-colors"
+                title="Clear Menu"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* Search + filters */}
         <section className="space-y-3">
           <div className="relative">
@@ -167,11 +260,10 @@ export const DashboardPage = () => {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full border ${
-                  filter === f
-                    ? 'bg-primary text-black border-primary'
-                    : 'bg-slate-900 border-slate-700 text-slate-300'
-                } capitalize whitespace-nowrap`}
+                className={`px-3 py-1 rounded-full border ${filter === f
+                  ? 'bg-primary text-slate-950 font-semibold border-primary'
+                  : 'bg-slate-900 border-slate-700 text-slate-300'
+                  } capitalize whitespace-nowrap`}
               >
                 {f}
               </button>
@@ -202,6 +294,13 @@ export const DashboardPage = () => {
           )}
         </section>
       </main>
+
+      <MenuModal
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        initialData={menuData}
+        onSave={handleSaveMenu}
+      />
 
       <AddCustomerModal
         open={addOpen}
