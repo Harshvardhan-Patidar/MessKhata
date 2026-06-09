@@ -408,3 +408,47 @@ BEGIN
   RETURN v_customer;
 END;
 $$;
+
+-- 4. Admins table for authentication and profile management
+CREATE TABLE public.admins (
+  uid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL UNIQUE,
+  mess_name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins see own row"
+  ON public.admins
+  FOR SELECT
+  USING (auth.uid() = auth_id);
+
+CREATE POLICY "Admins update own row"
+  ON public.admins
+  FOR UPDATE
+  USING (auth.uid() = auth_id);
+
+CREATE POLICY "Admins insert own row"
+  ON public.admins
+  FOR INSERT
+  WITH CHECK (auth.uid() = auth_id);
+
+-- 5. OTPs table for custom Fast2SMS authentication flow
+CREATE TABLE public.otps (
+  phone TEXT PRIMARY KEY,
+  otp TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+-- Enable RLS but add NO policies, meaning ONLY the service_role key can access this table.
+ALTER TABLE public.otps ENABLE ROW LEVEL SECURITY;
+
+-- Garbage collection function to delete expired OTPs
+CREATE OR REPLACE FUNCTION delete_expired_otps() RETURNS void AS $$
+BEGIN
+  DELETE FROM public.otps WHERE expires_at < now();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
