@@ -21,7 +21,7 @@ const useDebouncedValue = (value: string, delay = 300) => {
 };
 
 export const DashboardPage = () => {
-  const { signOut } = useAuth();
+  const { signOut, session } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -39,33 +39,41 @@ export const DashboardPage = () => {
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
-  // Load menu from localStorage on mount
+  // Load menu from Supabase on mount
   useEffect(() => {
-    const storedMenu = localStorage.getItem('messkhata_daily_menu');
-    if (storedMenu) {
-      try {
-        const parsed = JSON.parse(storedMenu);
-        // Handle migration from old array format
-        if (Array.isArray(parsed)) {
-          setMenuData({ morning: parsed, evening: [] });
-        } else {
-          setMenuData(parsed);
-        }
-      } catch (e) {
-        console.error('Failed to parse menu from localStorage', e);
-      }
-    }
-  }, []);
+    const loadMenu = async () => {
+      if (!session?.user?.id) return;
+      const { data } = await supabase
+        .from('admins')
+        .select('menu_data, menu_last_updated')
+        .eq('auth_id', session.user.id)
+        .single();
 
-  const handleSaveMenu = (data: MenuData) => {
+      if (data && data.menu_data) {
+        setMenuData(data.menu_data);
+      }
+    };
+    loadMenu();
+  }, [session]);
+
+  const handleSaveMenu = async (data: MenuData) => {
     setMenuData(data);
-    localStorage.setItem('messkhata_daily_menu', JSON.stringify(data));
+    if (!session?.user?.id) return;
+    const now = new Date().toISOString();
+    await supabase
+      .from('admins')
+      .update({ menu_data: data, menu_last_updated: now })
+      .eq('auth_id', session.user.id);
   };
 
-  const handleDeleteMenu = () => {
+  const handleDeleteMenu = async () => {
     if (window.confirm('Are you sure you want to clear the daily menus?')) {
       setMenuData(null);
-      localStorage.removeItem('messkhata_daily_menu');
+      if (!session?.user?.id) return;
+      await supabase
+        .from('admins')
+        .update({ menu_data: { morning: [], evening: [] }, menu_last_updated: new Date().toISOString() })
+        .eq('auth_id', session.user.id);
     }
   };
 

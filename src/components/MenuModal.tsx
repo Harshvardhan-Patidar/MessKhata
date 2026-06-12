@@ -18,8 +18,24 @@ export const MenuModal = ({ open, onClose, onSave, initialData }: Props) => {
 
   useEffect(() => {
     if (open) {
-      setMorningText(initialData?.morning?.join('\n') || '');
-      setEveningText(initialData?.evening?.join('\n') || '');
+      const now = new Date();
+      const hour = now.getHours();
+      
+      let mText = initialData?.morning?.join('\n') || '';
+      let eText = initialData?.evening?.join('\n') || '';
+
+      // Disappear morning text after 5 PM
+      if (hour >= 17) {
+        mText = '';
+      }
+
+      // Delete evening text automatically after 5 AM
+      if (hour >= 5 && hour < 17) {
+        eText = '';
+      }
+
+      setMorningText(mText);
+      setEveningText(eText);
     }
   }, [open, initialData]);
 

@@ -9,8 +9,10 @@ export const LoginPage = () => {
   const [activeTab, setActiveTab] = useState<'admin' | 'student'>('admin');
   
   // Admin State
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [adminStep, setAdminStep] = useState<'request' | 'verify'>('request');
+  const [adminName, setAdminName] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
+  const [adminOtp, setAdminOtp] = useState('');
   
   // Student State
   const [fullName, setFullName] = useState('');
@@ -27,19 +29,57 @@ export const LoginPage = () => {
     }
   }, [session, navigate]);
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleAdminRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
+    
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('admin-login', {
+        body: { name: adminName.trim(), phone: adminPhone.trim() }
+      });
 
-    // On successful login, go to dashboard
-    navigate('/', { replace: true });
+      if (invokeError) throw new Error(invokeError.message || 'Failed to request OTP');
+      if (data?.error) throw new Error(data.error);
+
+      setAdminStep('verify');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('admin-verify', {
+        body: { phone: adminPhone.trim(), otp: adminOtp.trim() }
+      });
+
+      if (invokeError) throw new Error(invokeError.message || 'Failed to verify OTP');
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.session) {
+        // Set the session
+        const { error: sessionError } = await supabase.auth.setSession(data.session);
+        if (sessionError) throw sessionError;
+        
+        // Save the login timestamp for 30-day enforcement
+        localStorage.setItem('admin_login_timestamp', Date.now().toString());
+        
+        navigate('/', { replace: true });
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStudentLogin = async (e: React.FormEvent) => {
@@ -63,8 +103,8 @@ export const LoginPage = () => {
       } else {
         throw new Error('Invalid response from server');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -105,39 +145,72 @@ export const LoginPage = () => {
           )}
 
           {activeTab === 'admin' ? (
-            <form onSubmit={handleAdminLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm mb-1 text-slate-300">Email</label>
-                <input
-                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-primary text-white"
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  autoComplete="email"
-                  required
-                />
-              </div>
+            adminStep === 'request' ? (
+              <form onSubmit={handleAdminRequestOTP} className="space-y-4">
+                <div>
+                  <label className="block text-sm mb-1 text-slate-300">Admin Name</label>
+                  <input
+                    className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-primary text-white"
+                    type="text"
+                    placeholder="e.g. John Doe"
+                    value={adminName}
+                    onChange={e => setAdminName(e.target.value)}
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm mb-1 text-slate-300">Password</label>
-                <input
-                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-primary text-white"
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm mb-1 text-slate-300">Phone Number</label>
+                  <input
+                    className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-primary text-white"
+                    type="tel"
+                    placeholder="e.g. 9876543210"
+                    value={adminPhone}
+                    onChange={e => setAdminPhone(e.target.value)}
+                    required
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-primary hover:bg-green-600 text-white font-semibold rounded-lg py-3 text-lg disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? 'Logging in…' : 'Login as Admin'}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary hover:bg-green-600 text-white font-semibold rounded-lg py-3 text-lg disabled:opacity-60 disabled:cursor-not-allowed transition-colors mt-2"
+                >
+                  {loading ? 'Requesting OTP…' : 'Send OTP'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleAdminVerifyOTP} className="space-y-4">
+                <div>
+                  <label className="block text-sm mb-1 text-slate-300">Enter OTP</label>
+                  <input
+                    className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-2xl text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-primary text-white font-mono"
+                    type="text"
+                    placeholder="------"
+                    maxLength={6}
+                    value={adminOtp}
+                    onChange={e => setAdminOtp(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary hover:bg-green-600 text-white font-semibold rounded-lg py-3 text-lg disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? 'Verifying…' : 'Verify & Login'}
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => { setAdminStep('request'); setAdminOtp(''); setError(null); }}
+                  className="w-full text-slate-400 hover:text-white text-sm py-2 transition-colors"
+                >
+                  Back to Phone Number
+                </button>
+              </form>
+            )
           ) : (
             <form onSubmit={handleStudentLogin} className="space-y-4">
               <div>

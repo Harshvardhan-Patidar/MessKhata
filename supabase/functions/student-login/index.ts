@@ -65,21 +65,24 @@ serve(async (req) => {
       )
     }
 
-    // Step 3: Fetch Mess Names and Admin Phone from Profiles table
+    // Step 3: Fetch Mess Names, Admin Phone, and Admin Name from admins table
     const adminIds = [...new Set(enrollments.map(e => e.admin_id))]
     
-    const { data: profiles } = await supabaseAdmin
-      .from('profiles')
-      .select('admin_id, mess_name, phone')
-      .in('admin_id', adminIds)
+    const { data: adminProfiles } = await supabaseAdmin
+      .from('admins')
+      .select('auth_id, mess_name, phone, name, menu_data, menu_last_updated')
+      .in('auth_id', adminIds)
 
-    // Step 4: Merge mess_name and admin_phone into the enrollments
+    // Step 4: Merge details into the enrollments
     const enrollmentsWithDetails = enrollments.map(e => {
-      const profile = profiles?.find(p => p.admin_id === e.admin_id)
+      const profile = adminProfiles?.find(p => p.auth_id === e.admin_id)
       return {
         ...e,
         mess_name: profile?.mess_name || 'Unknown Mess',
-        admin_phone: profile?.phone || ''
+        admin_phone: profile?.phone || '',
+        admin_name: profile?.name || '',
+        menu_data: profile?.menu_data || { morning: [], evening: [] },
+        menu_last_updated: profile?.menu_last_updated || null
       }
     })
 

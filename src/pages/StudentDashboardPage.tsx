@@ -11,6 +11,7 @@ type Customer = {
   admin_id: string;
   mess_name: string;
   admin_phone: string;
+  admin_name: string;
   full_name: string;
   mobile: string;
   customer_code: string;
@@ -20,6 +21,8 @@ type Customer = {
   total_plates: number;
   last_visit_at: string;
   plan_expiry_date: string;
+  menu_data?: { morning: string[], evening: string[] };
+  menu_last_updated?: string | null;
 };
 
 /**
@@ -112,18 +115,18 @@ export const StudentDashboardPage = () => {
     }
   };
 
-  /**
-   * Opens WhatsApp with a pre-filled message to notify the admin about skipping a meal.
-   * @param {Customer} student The mess enrollment data
-   * @param {'Morning' | 'Evening'} time The meal time being skipped
-   */
   const handleWhatsAppSkip = (student: Customer, time: 'Morning' | 'Evening') => {
     if (!student.admin_phone) {
       alert("This mess owner has not provided a contact number.");
       return;
     }
+
+    // Format for WhatsApp: Remove all non-digits. If it's exactly 10 digits, assume India (+91)
+    const cleanPhone = student.admin_phone.replace(/\D/g, '');
+    const finalPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
     const message = `Hello ${student.mess_name},\nI (${student.full_name}) will skip my tiffin this ${time}. Please do not prepare my meal.\nThank you!`;
-    const url = `https://wa.me/${student.admin_phone}?text=${encodeURIComponent(message)}`;
+    const url = `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 
@@ -139,6 +142,28 @@ export const StudentDashboardPage = () => {
   const isMorningActive = timeInMinutes < 570;
   // 4:30 PM is 990 minutes
   const isEveningActive = timeInMinutes < 990;
+
+  const getActiveMenu = (student: Customer) => {
+    if (!student.menu_data || !student.menu_last_updated) return null;
+
+    const now = new Date();
+    const updated = new Date(student.menu_last_updated);
+
+    // Time difference in hours
+    const diffHours = (now.getTime() - updated.getTime()) / (1000 * 60 * 60);
+
+    // If it was updated more than 20 hours ago, it's considered an old menu and we hide it automatically as the day changes.
+    if (diffHours > 20) return null;
+
+    const currentHour = now.getHours();
+    const isMorning = currentHour >= 5 && currentHour < 17;
+
+    if (isMorning) {
+      return { title: "🌅 Today's Morning Menu", items: student.menu_data.morning };
+    } else {
+      return { title: "🌆 Today's Evening Menu", items: student.menu_data.evening };
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-8 text-slate-200 font-sans">
@@ -179,6 +204,9 @@ export const StudentDashboardPage = () => {
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                       {student.mess_name || 'MessKhata Partner'}
                     </h2>
+                    {student.admin_name && (
+                      <p className="text-sm text-slate-400 mt-1">Admin: {student.admin_name}</p>
+                    )}
                   </div>
                   <span className={`mt-2 md:mt-0 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide border shadow-sm ${statusColor}`}>
                     {student.status.toUpperCase()}
@@ -216,7 +244,7 @@ export const StudentDashboardPage = () => {
                       </div>
 
                       <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 flex flex-col items-center justify-center text-center">
-                        <span className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">Consumed</span>
+                        <span className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">Total</span>
                         <span className="font-semibold text-white text-lg">
                           {student.total_plates ?? '0'}
                         </span>
@@ -229,6 +257,26 @@ export const StudentDashboardPage = () => {
                         </span>
                       </div>
                     </div>
+
+                    {/* Menu Display Section */}
+                    {(() => {
+                      const activeMenu = getActiveMenu(student);
+                      if (!activeMenu || !activeMenu.items || activeMenu.items.length === 0) return null;
+
+                      return (
+                        <div className="mt-5 bg-slate-800/40 rounded-2xl p-4 border border-slate-700/60 shadow-inner">
+                          <h3 className="text-sm font-bold text-slate-200 mb-2">{activeMenu.title}</h3>
+                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {activeMenu.items.map((item, idx) => (
+                              <li key={idx} className="flex items-center gap-2 text-sm text-slate-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })()}
 
                     <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4">
                       <div className="flex gap-2 w-full md:w-auto flex-wrap md:flex-nowrap">
