@@ -330,6 +330,9 @@ SET meals_consumed_today = 0,
 WHERE last_active_date IS NULL;
 
 -- 2. Bulletproof consume_plate function
+DROP FUNCTION IF EXISTS public.consume_plate(uuid, integer, text);
+DROP FUNCTION IF EXISTS public.consume_plate(uuid, integer);
+
 CREATE OR REPLACE FUNCTION consume_plate(p_customer_id UUID, p_count INT)
 RETURNS public.customers
 LANGUAGE plpgsql
@@ -355,10 +358,6 @@ BEGIN
     RAISE EXCEPTION 'Not enough plates remaining.';
   END IF;
 
-  IF v_customer.meals_consumed_today >= 3 THEN
-    RAISE EXCEPTION 'Daily limit of 3 meals reached.';
-  END IF;
-
   -- Update
   UPDATE customers
   SET remaining_plates = remaining_plates - p_count,
@@ -372,6 +371,9 @@ END;
 $$;
 
 -- 3. Bulletproof add_plate function
+DROP FUNCTION IF EXISTS public.add_plate(uuid, integer, text);
+DROP FUNCTION IF EXISTS public.add_plate(uuid, integer);
+
 CREATE OR REPLACE FUNCTION add_plate(p_customer_id UUID, p_count INT)
 RETURNS public.customers
 LANGUAGE plpgsql
@@ -393,8 +395,8 @@ BEGIN
   v_customer.plates_added_today := COALESCE(v_customer.plates_added_today, 0);
 
   -- Validation checks
-  IF v_customer.plates_added_today >= 1 THEN
-    RAISE EXCEPTION 'Daily limit of 1 plate addition reached.';
+  IF (v_customer.meals_consumed_today - v_customer.plates_added_today) < p_count THEN
+    RAISE EXCEPTION 'Cannot refund more plates than consumed today.';
   END IF;
 
   -- Update
