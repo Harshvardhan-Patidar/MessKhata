@@ -34,12 +34,7 @@ serve(async (req) => {
       .from('customers')
       .select('id')
       .eq('id', customer_id)
-      .or(`mobile.eq.${mobile},mobile.eq.${cleanMobile},mobile.eq.+91${cleanMobile}`)
-      // Note: Since we implemented multi-mess, we verify they own the mobile, but we ALSO need to make sure 
-      // they provided a valid customer code for AT LEAST ONE of their enrollments.
-      // We will do a two-step check for maximum security:
-      // 1. Check if the customer_id belongs to the mobile number
-      // 2. Check if the mobile number is associated with the provided customer_code ANYWHERE.
+      .in('mobile', [mobile, cleanMobile, `+91${cleanMobile}`])
       .single()
 
     if (validationError || !validCustomer) {
@@ -53,7 +48,7 @@ serve(async (req) => {
     const { data: codeCheck } = await supabaseAdmin
       .from('customers')
       .select('id')
-      .or(`mobile.eq.${mobile},mobile.eq.${cleanMobile},mobile.eq.+91${cleanMobile}`)
+      .in('mobile', [mobile, cleanMobile, `+91${cleanMobile}`])
       .eq('customer_code', customer_code)
       .limit(1)
 

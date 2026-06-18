@@ -132,53 +132,123 @@ create policy "Admins only delete own logs"
   using (auth.uid() = admin_id);
 
 
-create or replace function public.consume_plate(
-  p_customer_id uuid,
-  p_count integer default 1,
-  p_note text default 'Meal consumed'
+DROP FUNCTION IF EXISTS public.consume_plate(uuid, integer, text);
+DROP FUNCTION IF EXISTS public.consume_plate(uuid, integer);
+
+CREATE OR REPLACE FUNCTION public.consume_plate(
+  p_customer_id UUID,
+  p_count INT DEFAULT 1,
+  p_note TEXT DEFAULT 'Meal consumed'
 )
-returns public.customers
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  c public.customers;
-begin
+RETURNS public.customers
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_customer public.customers;
+BEGIN
   -- Lock the row for correct concurrent behavior
-  select * into c
-  from public.customers
-  where id = p_customer_id
-    and admin_id = auth.uid()
-  for update;
+  SELECT * INTO v_customer
+  FROM public.customers
+  WHERE id = p_customer_id
+    AND admin_id = auth.uid()
+  FOR UPDATE;
 
-  if not found then
-    raise exception 'Customer not found or not owned by admin';
-  end if;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Customer not found or not owned by admin';
+  END IF;
 
-  if c.remaining_plates is null or c.remaining_plates < p_count then
-    raise exception 'Not enough remaining plates';
-  end if;
+  -- Handle New Day Reset
+  IF v_customer.last_active_date IS NULL OR v_customer.last_active_date < CURRENT_DATE THEN
+    v_customer.meals_consumed_today := 0;
+    v_customer.plates_added_today := 0;
+    v_customer.last_active_date := CURRENT_DATE;
+  END IF;
+
+  v_customer.meals_consumed_today := COALESCE(v_customer.meals_consumed_today, 0);
+
+  IF v_customer.remaining_plates IS NULL OR v_customer.remaining_plates < p_count THEN
+    RAISE EXCEPTION 'Not enough remaining plates';
+  END IF;
 
   -- Check expiry for fixed plans
-  if c.current_plan_type = 'fixed_plates'
-     and c.plan_expiry_date is not null
-     and c.plan_expiry_date < now() then
-    raise exception 'Plan has already expired';
-  end if;
+  IF v_customer.current_plan_type = 'fixed_plates'
+     AND v_customer.plan_expiry_date IS NOT NULL
+     AND v_customer.plan_expiry_date < now() THEN
+    RAISE EXCEPTION 'Plan has already expired';
+  END IF;
 
-  update public.customers
-    set remaining_plates = remaining_plates - p_count,
+  UPDATE public.customers
+    SET remaining_plates = remaining_plates - p_count,
+        meals_consumed_today = v_customer.meals_consumed_today + p_count,
+        last_active_date = CURRENT_DATE,
         last_visit_at    = now(),
         updated_at       = now()
-  where id = p_customer_id
-  returning * into c;
+  WHERE id = p_customer_id
+  RETURNING * INTO v_customer;
 
-  insert into public.logs (admin_id, customer_id, plates_deducted, note)
-  values (auth.uid(), p_customer_id, p_count, p_note);
+  INSERT INTO public.logs (admin_id, customer_id, plates_deducted, note)
+  VALUES (auth.uid(), p_customer_id, p_count, p_note);
 
-  return c;
-end;
+  RETURN v_customer;
+END;
+$$;
+
+
+DROP FUNCTION IF EXISTS public.add_plate(uuid, integer, text);
+DROP FUNCTION IF EXISTS public.add_plate(uuid, integer);
+
+CREATE OR REPLACE FUNCTION public.add_plate(
+  p_customer_id UUID,
+  p_count INT DEFAULT 1,
+  p_note TEXT DEFAULT 'Refund Plate'
+)
+RETURNS public.customers
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_customer public.customers;
+BEGIN
+  SELECT * INTO v_customer
+  FROM public.customers
+  WHERE id = p_customer_id
+    AND admin_id = auth.uid()
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Customer not found or not owned by admin';
+  END IF;
+
+  IF v_customer.last_active_date IS NULL OR v_customer.last_active_date < CURRENT_DATE THEN
+    v_customer.meals_consumed_today := 0;
+    v_customer.plates_added_today := 0;
+    v_customer.last_active_date := CURRENT_DATE;
+  END IF;
+
+  v_customer.plates_added_today := COALESCE(v_customer.plates_added_today, 0);
+
+  -- You can only refund plates that were actually eaten today!
+  IF (v_customer.meals_consumed_today - v_customer.plates_added_today) < p_count THEN
+    RAISE EXCEPTION 'Cannot refund more plates than consumed today.';
+  END IF;
+
+  UPDATE public.customers
+  SET remaining_plates = remaining_plates + p_count,
+      plates_added_today = v_customer.plates_added_today + p_count,
+      last_active_date = CURRENT_DATE,
+      updated_at = now()
+  WHERE id = p_customer_id
+  RETURNING * INTO v_customer;
+
+  -- We must log 0 plates deducted because the logs table has a check constraint (plates_deducted >= 0)
+  INSERT INTO public.logs (admin_id, customer_id, plates_deducted, note)
+  VALUES (auth.uid(), p_customer_id, 0, p_note);
+
+  RETURN v_customer;
+END;
 $$;
 
 
@@ -329,87 +399,7 @@ SET meals_consumed_today = 0,
     last_active_date = CURRENT_DATE 
 WHERE last_active_date IS NULL;
 
--- 2. Bulletproof consume_plate function
-DROP FUNCTION IF EXISTS public.consume_plate(uuid, integer, text);
-DROP FUNCTION IF EXISTS public.consume_plate(uuid, integer);
-
-CREATE OR REPLACE FUNCTION consume_plate(p_customer_id UUID, p_count INT)
-RETURNS public.customers
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_customer public.customers;
-BEGIN
-  -- Lock row to prevent fast double-clicks from bypassing the limit
-  SELECT * INTO v_customer FROM customers WHERE id = p_customer_id FOR UPDATE;
-
-  -- Handle New Day Reset & NULLs
-  IF v_customer.last_active_date IS NULL OR v_customer.last_active_date < CURRENT_DATE THEN
-    v_customer.meals_consumed_today := 0;
-    v_customer.plates_added_today := 0;
-    v_customer.last_active_date := CURRENT_DATE;
-  END IF;
-
-  v_customer.meals_consumed_today := COALESCE(v_customer.meals_consumed_today, 0);
-  
-  -- Validation checks
-  IF v_customer.remaining_plates < p_count THEN
-    RAISE EXCEPTION 'Not enough plates remaining.';
-  END IF;
-
-  -- Update
-  UPDATE customers
-  SET remaining_plates = remaining_plates - p_count,
-      meals_consumed_today = v_customer.meals_consumed_today + 1,
-      last_active_date = CURRENT_DATE
-  WHERE id = p_customer_id
-  RETURNING * INTO v_customer;
-
-  RETURN v_customer;
-END;
-$$;
-
--- 3. Bulletproof add_plate function
-DROP FUNCTION IF EXISTS public.add_plate(uuid, integer, text);
-DROP FUNCTION IF EXISTS public.add_plate(uuid, integer);
-
-CREATE OR REPLACE FUNCTION add_plate(p_customer_id UUID, p_count INT)
-RETURNS public.customers
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_customer public.customers;
-BEGIN
-  -- Lock row
-  SELECT * INTO v_customer FROM customers WHERE id = p_customer_id FOR UPDATE;
-
-  -- Handle New Day Reset & NULLs
-  IF v_customer.last_active_date IS NULL OR v_customer.last_active_date < CURRENT_DATE THEN
-    v_customer.meals_consumed_today := 0;
-    v_customer.plates_added_today := 0;
-    v_customer.last_active_date := CURRENT_DATE;
-  END IF;
-
-  v_customer.plates_added_today := COALESCE(v_customer.plates_added_today, 0);
-
-  -- Validation checks
-  IF (v_customer.meals_consumed_today - v_customer.plates_added_today) < p_count THEN
-    RAISE EXCEPTION 'Cannot refund more plates than consumed today.';
-  END IF;
-
-  -- Update
-  UPDATE customers
-  SET remaining_plates = remaining_plates + p_count,
-      plates_added_today = v_customer.plates_added_today + 1,
-      last_active_date = CURRENT_DATE
-  WHERE id = p_customer_id
-  RETURNING * INTO v_customer;
-
-  RETURN v_customer;
-END;
-$$;
+-- Duplicate functions removed
 
 -- 4. Admins table for authentication and profile management
 CREATE TABLE public.admins (

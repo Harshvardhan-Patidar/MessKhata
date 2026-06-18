@@ -46,7 +46,7 @@ serve(async (req) => {
         admin_id
       `)
       .ilike('full_name', full_name.trim())
-      .or(`mobile.eq.${mobile},mobile.eq.${cleanMobile},mobile.eq.+91${cleanMobile}`)
+      .in('mobile', [mobile, cleanMobile, `+91${cleanMobile}`])
 
     if (error || !enrollments || enrollments.length === 0) {
       return new Response(
