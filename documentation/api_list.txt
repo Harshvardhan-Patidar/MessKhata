@@ -1,0 +1,74 @@
+======================================================================
+MESSKHATA - ALL API ENDPOINTS & PROCEDURES CALL LIST
+======================================================================
+
+Below is the complete list of all external API endpoints, Edge Functions, database RPCs (Remote Procedure Calls), and database queries called and used throughout the MessKhata project.
+
+----------------------------------------------------------------------
+1. SUPABASE EDGE FUNCTIONS (Custom HTTP / REST API Endpoints)
+----------------------------------------------------------------------
+These functions are custom backend endpoints hosted on Supabase, invoked using HTTP requests via the Supabase client:
+
+* URL Path / Function Name: "admin-login"
+  - Purpose: Initiates the login flow for an administrator.
+  - Usage: Validates if the admin exists with the provided name/phone, generates a secure 6-digit OTP, saves it, and triggers Fast2SMS to send the SMS to the admin.
+
+* URL Path / Function Name: "admin-verify"
+  - Purpose: Validates the admin's OTP and signs them in.
+  - Usage: Checks the submitted OTP or environment-configured MASTER_OTP. Implements a 3-attempt brute-force rate limit, deletes the OTP upon success, provisions an auth user if needed, and returns the session tokens.
+
+* URL Path / Function Name: "student-login"
+  - Purpose: Verifies student identity and fetches active profiles.
+  - Usage: Takes the student's name, 10-digit Indian phone number, and unique customer code. If valid, retrieves all matching enrollments, the corresponding mess names, admin names, and today's menus.
+
+* URL Path / Function Name: "student-logs"
+  - Purpose: Retrieves recent meal consumption history for a student.
+  - Usage: Verifies the student's identity and returns log history (plates deducted, notes, timestamps) from the past 3 days for the specific student ID to avoid cross-profile IDOR leaks.
+
+----------------------------------------------------------------------
+2. DATABASE RPC PROCEDURES (Supabase Remote Procedure Calls)
+----------------------------------------------------------------------
+These are plpgsql functions executing directly inside the database, called from the client interface using `supabase.rpc()`:
+
+* RPC Name: "consume_plate"
+  - Purpose: Processes plate consumption when the "EAT" button is clicked.
+  - Usage: Checks that the plan is active and not expired, resets daily counters if a new day has started (IST timezone), enforces a limit of 3 meals per day, decrements remaining plates, and inserts an audit log entry.
+
+* RPC Name: "add_plate"
+  - Purpose: Adds a credit/refund plate when the "+1 More" button is clicked.
+  - Usage: Only allowed after a student has eaten 3 meals on the current day, allows a maximum of 1 plate addition per day, increments remaining plates, and adds an audit log entry.
+
+* RPC Name: "renew_plan"
+  - Purpose: Renews/extends a customer's subscription plan.
+  - Usage: Resets remaining plates to the new plan count, increases the lifetime total plates, updates the expiration date (preserving it if null via COALESCE), and logs the renewal.
+
+* RPC Name: "auto_update_expired_and_archived"
+  - Purpose: Automatically keeps customer statuses up to date.
+  - Usage: Executed on admin dashboard load. Sets active customer status to 'expired' if remaining plates hit 0 or the expiration date passes. Auto-archives customers who have been expired for more than 10 days.
+
+* RPC Name: "delete_stale_users"
+  - Purpose: Database clean-up/garbage collection.
+  - Usage: Executed on admin dashboard load. Permanently deletes customer records that have been expired/archived for over 3 months (records without expiry dates are never deleted).
+
+----------------------------------------------------------------------
+3. SUPABASE DATABASE API (PostgREST Queries & Updates)
+----------------------------------------------------------------------
+These tables are accessed directly by the client using Supabase's automatic REST API:
+
+* Table: "admins"
+  - Select API: Fetches the logged-in admin's profile data (mess name, current menu items).
+  - Update API: Allows admins to modify their mess name or update morning/evening menu items.
+
+* Table: "customers"
+  - Select API: Fetches all customer profiles and current plate statuses to list on the dashboard.
+  - Insert API: Registers new customers under the logged-in admin's ID (stores name, phone, customer code, initial plates, plan type, expiry date, status).
+  - Update API: Updates a customer's profile details (e.g. saving the uploaded photo URL).
+
+----------------------------------------------------------------------
+4. SUPABASE STORAGE BUCKET API (Object Storage Calls)
+----------------------------------------------------------------------
+Used to handle physical student photos:
+
+* Bucket Name: "customer-photos"
+  - Upload API: Uploads the profile photo captured from the admin's camera (limited to files < 2MB).
+  - GetPublicUrl API: Generates the public HTTP URL for the uploaded profile photo to store in the customer's database record.

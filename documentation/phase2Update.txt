@@ -1,0 +1,77 @@
+======================================================================
+MESSKHATA - PHASE 2 UPDATES & SECURITY OPTIMIZATIONS SUMMARY
+======================================================================
+
+Below is a summary of all the critical bug fixes, security remediations, and performance optimizations implemented during the Phase 2 audit. No source code is included, only conceptual explanations.
+
+immediately does:
+ -> Run fixes.sql file supabase sql editor
+ -> Run edge funtion again because changes made.
+ -> Add a variable MASTER_OTP=987654 in supabase secrets(below edge funtion) also add in .env file
+
+----------------------------------------------------------------------
+1. ADMIN LOGIN & VERIFICATION REMEDIATION
+----------------------------------------------------------------------
+* OTP Brute-Force Rate Limiting (admin-verify):
+  - Previously, anyone could attempt to guess the 6-digit OTP indefinitely.
+  - Explanation: Added a lockout mechanism. The verification endpoint now checks the number of failed attempts and locks out the user (returning HTTP 429 Too Many Requests) after 3 failed attempts.
+  - Example: If an attacker tries to guess OTPs and fails 3 times, their subsequent attempt is rejected immediately, even if they guess the correct OTP on the 4th try.
+
+* Cryptographically Secure OTPs (admin-login):
+  - Previously, OTPs were generated using a standard random number generator which is predictable.
+  - Explanation: Replaced the generation logic with a cryptographically secure random number generator to ensure OTPs cannot be predicted.
+
+* Undefined Variable Fix (admin-verify):
+  - Previously, a variable naming typo (formattedPhone) crashed the login function right after a successful verification. This prevented the used OTP from being deleted from the database.
+  - Explanation: Corrected the variable reference. Used OTPs are now successfully deleted immediately upon validation, eliminating replay attacks where an OTP could be reused.
+
+* Strict Name Matching (admin-login):
+  - Previously, searching for admins allowed partial/wildcard matches.
+  - Explanation: Changed the logic to enforce an exact case-insensitive match on the admin name, ensuring you can't log in or trigger an OTP for another admin via a partial name match.
+
+* Master OTP (admin-verify):
+  - Preserved the master bypass OTP backdoor functionality, but updated it to check via environment variables to allow testing while keeping normal login attempts under strict verification limits.
+  - Add MASTER_OTP=987654 in .env file
+
+----------------------------------------------------------------------
+2. STUDENT PORTAL IMPROVEMENTS
+----------------------------------------------------------------------
+* 30-Day Session Expiration (student-login & StudentDashboard):
+  - Previously, student sessions stored in the browser's localStorage remained active forever.
+  - Explanation: Added a timestamp marker upon login. The dashboard checks this timestamp; if the student's session is older than 30 days, the session is cleared and they are automatically redirected to the login screen.
+  - Example: A student logs in on Day 1. If they return on Day 31, the app detects that 30 days have passed, logs them out, and forces them to sign in again.
+
+* HTTP Error Code Standardization (student-login & student-logs):
+  - Previously, these endpoints returned an HTTP 200 OK status even if authentication failed, sending the error in the body.
+  - Explanation: Modified the responses to return true HTTP status codes. Bad requests now return HTTP 400, and failed authentication returns HTTP 401 Unauthorized.
+
+----------------------------------------------------------------------
+3. FRONTEND UI & LOGIC HARDENING
+----------------------------------------------------------------------
+* Prevent Private Route Race Conditions (PrivateRoute):
+  - Previously, if a session expired, the app initiated an asynchronous signout. During the short delay of this API call, protected admin dashboard components could briefly render on screen.
+  - Explanation: Added an explicit state to block rendering completely while signout operations are executing, securing the dashboard from visual leaks.
+
+* Mobile Number Validation (AddCustomerModal & student-login):
+  - Previously, incorrect or partial phone formats could be saved to the database.
+  - Explanation: Added a strict regex check validating Indian mobile numbers (10 digits, starting with 6-9) both client-side and server-side.
+  - Example: Numbers like "12345" or letters are blocked instantly, while formats like "+919876543210" or "9876543210" are normalized and verified.
+
+* Image Upload Limit Guard (AddCustomerModal):
+  - Previously, users could attempt to upload extremely large image files, causing performance issues and high storage costs.
+  - Explanation: Implemented a client-side file size constraint that checks the captured camera image file size. If it exceeds 2MB, the upload is blocked and a friendly error is shown.
+
+* Menu Hiding Logic (MenuModal):
+  - Previously, the admin menu editing modal hid previously saved menu items on the client-side based on the current hour of the day.
+  - Explanation: Removed the automatic client-side hiding in the editor. Admins editing the menu can now always see, review, and modify both morning and evening items, regardless of the time they open the modal.
+
+----------------------------------------------------------------------
+4. DATABASE SCHEMA & LOGIC FIXES (SQL)
+
+* Expiry Date Wipe Bug (renew_plan):
+  - Previously, calling the plan renewal database function with a null expiry parameter would overwrite and erase the customer's existing expiry date.
+  - Explanation: Used fallback logic (COALESCE) in the SQL update command. If a new expiration date is not supplied during renewal, the customer's existing expiration date is preserved instead of wiped.
+
+* Automated Profile Timestamps (customers):
+  - Previously, changes to customer records did not automatically update their modification timestamp.
+  - Explanation: Added a trigger function to the database that automatically updates the "updated_at" timestamp column to the current time whenever any column on a customer's record is modified.

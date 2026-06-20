@@ -1,0 +1,13 @@
+1. https://imsdsuyzjffmidswpzdr.supabase.co/functions/v1/admin-login
+2. https://imsdsuyzjffmidswpzdr.supabase.co/functions/v1/admin-verify
+3. https://imsdsuyzjffmidswpzdr.supabase.co/functions/v1/student-login
+4. https://imsdsuyzjffmidswpzdr.supabase.co/functions/v1/student-logs
+5. https://imsdsuyzjffmidswpzdr.supabase.co/rest/v1/rpc/consume_plate
+6. https://imsdsuyzjffmidswpzdr.supabase.co/rest/v1/rpc/add_plate
+7. https://imsdsuyzjffmidswpzdr.supabase.co/rest/v1/rpc/renew_plan
+8. https://imsdsuyzjffmidswpzdr.supabase.co/rest/v1/rpc/auto_update_expired_and_archived
+9. https://imsdsuyzjffmidswpzdr.supabase.co/rest/v1/rpc/delete_stale_users
+10. https://imsdsuyzjffmidswpzdr.supabase.co/rest/v1/admins
+11. https://imsdsuyzjffmidswpzdr.supabase.co/rest/v1/customers
+12. https://imsdsuyzjffmidswpzdr.supabase.co/storage/v1/object/customer-photos
+13. https://imsdsuyzjffmidswpzdr.supabase.co/storage/v1/object/public/customer-photos
