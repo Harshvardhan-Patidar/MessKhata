@@ -66,15 +66,13 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
   const canEat =
     customer.status === 'active' &&
     remaining > 0 &&
-    isValidExpiry &&
-    mealsToday < 3;
+    isValidExpiry;
 
-  // +1 More: only after all 3 meals eaten today, and only once per day
+  // Refund Plate: only if they have consumed a net > 0 plates today
   const canAddPlate =
     customer.status === 'active' &&
     isValidExpiry &&
-    mealsToday >= 3 &&
-    platesAddedToday < 1;
+    (mealsToday - platesAddedToday) > 0;
 
   const isExpiredNow = customer.status !== 'active';
 
@@ -136,8 +134,8 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
     customer.status === 'active'
       ? 'bg-emerald-500/20 text-emerald-300'
       : customer.status === 'expired'
-      ? 'bg-red-500/20 text-red-300'
-      : 'bg-slate-600/40 text-slate-200';
+        ? 'bg-red-500/20 text-red-300'
+        : 'bg-slate-600/40 text-slate-200';
 
   return (
     <div className="bg-slate-900/80 rounded-2xl p-4 flex flex-col gap-3 shadow-lg">
@@ -190,20 +188,11 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
           <p className={`text-3xl font-extrabold ${canEat ? 'text-primary' : 'text-red-500'}`}>
             {remaining}
           </p>
-          {/* {typeof (customer.current_plan_total ?? customer.total_plates) === 'number' && (
-            <p className="text-[11px] text-slate-500">
-              Plan total: {customer.current_plan_total ?? customer.total_plates}
-            </p>
-          )} */}
           {typeof customer.total_plates === 'number' && (
             <p className="text-[11px] text-slate-500">
               Lifetime total: {customer.total_plates}
             </p>
           )}
-          {/* Daily meal tracker */}  
-          {/* <p className="text-[11px] text-slate-500 mt-0.5">
-            Meals today: {mealsToday}/3
-          </p> */}
 
           {/* Plates today counter: EAT increases, +1 More decreases */}
           <div className="mt-1.5 flex items-baseline gap-1">
@@ -219,22 +208,19 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
             {customer.status}
           </span>
 
-          {/* +1 More button — replaces EAT in this slot */}
+          {/* Refund Plate button */}
           <button
             onClick={handleAddPlate}
             disabled={!canAddPlate || isAdding}
             title={
-              mealsToday < 3
-                ? 'Available after customer eats all 3 meals today'
-                : platesAddedToday >= 1
-                ? 'Already added a plate today'
-                : '+1 plate'
+              (mealsToday - platesAddedToday) <= 0
+                ? 'Can only refund after eating a plate today'
+                : 'Refund 1 Plate'
             }
-            className={`px-4 py-2 rounded-lg text-sm font-bold w-28 transition-colors ${
-              canAddPlate && !isAdding
-                ? 'bg-amber-500 hover:bg-amber-400 text-black'
-                : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold w-28 transition-colors ${canAddPlate && !isAdding
+              ? 'bg-amber-500 hover:bg-amber-400 text-black'
+              : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              }`}
           >
             {isAdding ? '…' : '+1 More'}
           </button>
@@ -264,13 +250,12 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
       <button
         onClick={handleEat}
         disabled={!canEat || isEating}
-        className={`w-full py-3 rounded-xl text-lg font-bold tracking-wide transition-colors ${
-          canEat && !isEating
-            ? 'bg-green-600 hover:bg-green-500 active:bg-green-700 text-white'
-            : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-        }`}
+        className={`w-full py-3 rounded-xl text-lg font-bold tracking-wide transition-colors ${canEat && !isEating
+          ? 'bg-green-600 hover:bg-green-500 active:bg-green-700 text-white'
+          : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+          }`}
       >
-        {isEating ? 'Please wait…' : mealsToday >= 3 ? 'EAT (limit reached today)' : `EAT  (${mealsToday}/3)`}
+        {isEating ? 'Please wait…' : 'EAT'}
       </button>
       {eatError && (
         <p className="text-[10px] text-red-400 text-center leading-tight -mt-1">
