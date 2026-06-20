@@ -18,24 +18,11 @@ export const MenuModal = ({ open, onClose, onSave, initialData }: Props) => {
 
   useEffect(() => {
     if (open) {
-      const now = new Date();
-      const hour = now.getHours();
-      
-      let mText = initialData?.morning?.join('\n') || '';
-      let eText = initialData?.evening?.join('\n') || '';
-
-      // Disappear morning text after 5 PM
-      if (hour >= 17) {
-        mText = '';
-      }
-
-      // Delete evening text automatically after 5 AM
-      if (hour >= 5 && hour < 17) {
-        eText = '';
-      }
-
-      setMorningText(mText);
-      setEveningText(eText);
+      // Use the raw data from the DB — no client-side hiding.
+      // The server/StudentDashboardPage logic should handle visibility of old menus,
+      // but the Admin should always see what they previously saved.
+      setMorningText(initialData?.morning?.join('\n') || '');
+      setEveningText(initialData?.evening?.join('\n') || '');
     }
   }, [open, initialData]);
 

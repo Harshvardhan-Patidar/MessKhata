@@ -99,6 +99,7 @@ export const LoginPage = () => {
 
       if (data?.enrollments) {
         localStorage.setItem('student_session', JSON.stringify(data.enrollments));
+        localStorage.setItem('student_login_timestamp', Date.now().toString());
         navigate('/student', { replace: true });
       } else {
         throw new Error('Invalid response from server');

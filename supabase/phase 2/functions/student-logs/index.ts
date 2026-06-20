@@ -17,7 +17,7 @@ serve(async (req) => {
     if (!customer_id || !mobile || !customer_code) {
       return new Response(
         JSON.stringify({ error: 'Customer ID, Mobile number, and customer code are required' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -28,8 +28,7 @@ serve(async (req) => {
 
     const cleanMobile = mobile.replace('+91', '')
 
-    // Step 1: Verify Identity - ensure this mobile + customer_code matches the requested customer_id
-    // This prevents a student from querying another student's logs!
+    // Step 1: Verify Identity — ensure mobile + customer_id match (prevents IDOR)
     const { data: validCustomer, error: validationError } = await supabaseAdmin
       .from('customers')
       .select('id')
@@ -38,13 +37,13 @@ serve(async (req) => {
       .single()
 
     if (validationError || !validCustomer) {
-       return new Response(
+      return new Response(
         JSON.stringify({ error: 'Unauthorized: Invalid customer ID or mobile' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Verify the customer_code actually belongs to this mobile number across any of their enrollments
+    // Step 2: Verify customer_code belongs to this mobile number
     const { data: codeCheck } = await supabaseAdmin
       .from('customers')
       .select('id')
@@ -55,11 +54,11 @@ serve(async (req) => {
     if (!codeCheck || codeCheck.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Invalid customer code' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Step 2: Fetch Logs from the past 3 days for the specific customer_id
+    // Step 3: Fetch logs from past 3 days for the specific customer_id
     const threeDaysAgo = new Date()
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
 
@@ -78,12 +77,11 @@ serve(async (req) => {
       JSON.stringify({ logs }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-
   } catch (err: unknown) {
     console.error(err)
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : 'Internal Server Error' }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

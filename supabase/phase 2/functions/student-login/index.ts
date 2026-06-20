@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/** Indian mobile number: 10 digits starting with 6-9 */
+const INDIA_MOBILE_REGEX = /^[6-9]\d{9}$/
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -17,7 +20,16 @@ serve(async (req) => {
     if (!full_name || !mobile || !customer_code) {
       return new Response(
         JSON.stringify({ error: 'Name, Mobile number, and customer code are required' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate mobile number format
+    const cleanMobile = mobile.replace('+91', '').replace(/\D/g, '')
+    if (!INDIA_MOBILE_REGEX.test(cleanMobile)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid mobile number. Please enter a valid 10-digit Indian mobile number.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -25,8 +37,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
-
-    const cleanMobile = mobile.replace('+91', '')
 
     // Step 1: Fetch ALL enrollments for this mobile number and name
     const { data: enrollments, error } = await supabaseAdmin
@@ -51,7 +61,7 @@ serve(async (req) => {
     if (error || !enrollments || enrollments.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Invalid name or mobile number' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -61,13 +71,13 @@ serve(async (req) => {
     if (!isValid) {
       return new Response(
         JSON.stringify({ error: 'Invalid customer code' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Step 3: Fetch Mess Names, Admin Phone, and Admin Name from admins table
     const adminIds = [...new Set(enrollments.map(e => e.admin_id))]
-    
+
     const { data: adminProfiles } = await supabaseAdmin
       .from('admins')
       .select('auth_id, mess_name, phone, name, menu_data, menu_last_updated')
@@ -82,7 +92,7 @@ serve(async (req) => {
         admin_phone: profile?.phone || '',
         admin_name: profile?.name || '',
         menu_data: profile?.menu_data || { morning: [], evening: [] },
-        menu_last_updated: profile?.menu_last_updated || null
+        menu_last_updated: profile?.menu_last_updated || null,
       }
     })
 
@@ -91,12 +101,11 @@ serve(async (req) => {
       JSON.stringify({ enrollments: enrollmentsWithDetails }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-
   } catch (err: unknown) {
     console.error(err)
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : 'Internal Server Error' }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

@@ -163,6 +163,15 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
       setLoading(false);
       return;
     }
+
+    // Validate Indian mobile number: 10 digits, starts with 6-9
+    const cleanMobile = mobile.trim().replace(/^\+?91/, '');
+    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      setError('Enter a valid 10-digit Indian mobile number (starting with 6-9).');
+      setLoading(false);
+      return;
+    }
+
     if (plates <= 0) {
       setError('Plates must be greater than 0.');
       setLoading(false);
@@ -173,6 +182,15 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
     let uploadedPhotoUrl: string | null = null;
     if (photoPreview) {
       const file = dataUrlToFile(photoPreview, `${customerCode.trim()}_${Date.now()}.jpg`);
+
+      // Guard: reject photos larger than 2 MB
+      const MAX_PHOTO_SIZE = 2 * 1024 * 1024; // 2 MB
+      if (file.size > MAX_PHOTO_SIZE) {
+        setError('Photo is too large. Please use an image under 2 MB.');
+        setLoading(false);
+        return;
+      }
+
       const { error: uploadError } = await supabase.storage
         .from('customer-photos')
         .upload(file.name, file, { upsert: true });

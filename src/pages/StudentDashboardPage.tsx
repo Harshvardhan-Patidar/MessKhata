@@ -65,6 +65,21 @@ export const StudentDashboardPage = () => {
       return;
     }
 
+    // ── 30-day session expiry ────────────────────────────────────────────
+    const loginTimestamp = localStorage.getItem('student_login_timestamp');
+    if (loginTimestamp) {
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      if (Date.now() - parseInt(loginTimestamp, 10) > thirtyDaysMs) {
+        localStorage.removeItem('student_session');
+        localStorage.removeItem('student_login_timestamp');
+        navigate('/login', { replace: true });
+        return;
+      }
+    } else {
+      // No timestamp stored — treat as a legacy session and stamp it now
+      localStorage.setItem('student_login_timestamp', Date.now().toString());
+    }
+
     try {
       const parsedData = JSON.parse(studentData);
       if (Array.isArray(parsedData)) {
@@ -74,12 +89,14 @@ export const StudentDashboardPage = () => {
       }
     } catch {
       localStorage.removeItem('student_session');
+      localStorage.removeItem('student_login_timestamp');
       navigate('/login', { replace: true });
     }
   }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('student_session');
+    localStorage.removeItem('student_login_timestamp');
     navigate('/login', { replace: true });
   };
 
