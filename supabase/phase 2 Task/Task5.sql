@@ -11,8 +11,12 @@ AS $$
 DECLARE
   v_customer public.customers;
 BEGIN
-  -- Lock row to prevent fast double-clicks
-  SELECT * INTO v_customer FROM customers WHERE id = p_customer_id FOR UPDATE;
+  -- Lock row to prevent fast double-clicks and ensure admin owns the customer
+  SELECT * INTO v_customer FROM customers WHERE id = p_customer_id AND admin_id = auth.uid() FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Customer not found or not owned by admin';
+  END IF;
 
   -- Handle New Day Reset
   IF v_customer.last_active_date IS NULL OR v_customer.last_active_date < CURRENT_DATE THEN
@@ -37,6 +41,10 @@ BEGIN
   WHERE id = p_customer_id
   RETURNING * INTO v_customer;
 
+  -- Log the action
+  INSERT INTO public.logs (admin_id, customer_id, plates_deducted, note)
+  VALUES (auth.uid(), p_customer_id, p_count, 'Meal consumed');
+
   RETURN v_customer;
 END;
 $$;
@@ -54,7 +62,12 @@ AS $$
 DECLARE
   v_customer public.customers;
 BEGIN
-  SELECT * INTO v_customer FROM customers WHERE id = p_customer_id FOR UPDATE;
+  -- Lock row and verify admin owns customer
+  SELECT * INTO v_customer FROM customers WHERE id = p_customer_id AND admin_id = auth.uid() FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Customer not found or not owned by admin';
+  END IF;
 
   IF v_customer.last_active_date IS NULL OR v_customer.last_active_date < CURRENT_DATE THEN
     v_customer.meals_consumed_today := 0;
@@ -77,6 +90,10 @@ BEGIN
       last_active_date = CURRENT_DATE
   WHERE id = p_customer_id
   RETURNING * INTO v_customer;
+
+  -- Log with plates_deducted = 0 (it's an addition, not a deduction)
+  INSERT INTO public.logs (admin_id, customer_id, plates_deducted, note)
+  VALUES (auth.uid(), p_customer_id, 0, '+1 plate added');
 
   RETURN v_customer;
 END;

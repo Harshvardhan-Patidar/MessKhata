@@ -55,8 +55,8 @@ BEGIN
       current_plan_total = p_additional_plates,
       -- remaining equals new plan size on renew
       remaining_plates  = p_additional_plates,
-      -- FIX: Preserve existing expiry date if p_new_expiry is not provided
-      plan_expiry_date  = COALESCE(p_new_expiry, plan_expiry_date),
+      -- FIX: Allow plan_expiry_date to be wiped (set to null) if p_new_expiry is null, so expired users can be renewed with no expiry.
+      plan_expiry_date  = p_new_expiry,
       status            = 'active'
       -- updated_at is now handled by the trigger automatically
   WHERE id = p_customer_id

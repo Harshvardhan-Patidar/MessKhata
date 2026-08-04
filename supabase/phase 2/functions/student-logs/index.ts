@@ -58,15 +58,15 @@ serve(async (req) => {
       )
     }
 
-    // Step 3: Fetch logs from past 3 days for the specific customer_id
-    const threeDaysAgo = new Date()
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+    // Step 3: Fetch logs from past 15 days for the specific customer_id
+    const fifteenDaysAgo = new Date()
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15)
 
     const { data: logs, error: logsError } = await supabaseAdmin
       .from('logs')
       .select('id, plates_deducted, note, created_at')
       .eq('customer_id', customer_id)
-      .gte('created_at', threeDaysAgo.toISOString())
+      .gte('created_at', fifteenDaysAgo.toISOString())
       .order('created_at', { ascending: false })
 
     if (logsError) {
