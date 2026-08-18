@@ -66,42 +66,42 @@ export const RenewModal = ({ open, onClose, onUpdated, customer }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 px-3">
-      <div className="w-full max-w-md bg-slate-900 rounded-2xl p-5 space-y-4">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-40 px-3">
+      <div className="w-full max-w-md glass-panel rounded-[24px] p-6 space-y-4 shadow-2xl relative">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Renew Plan</h2>
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">Renew Plan</h2>
           <button
             onClick={handleClose}
-            className="text-slate-400 hover:text-slate-200 text-lg"
+            className="text-slate-450 hover:text-slate-700 transition-colors text-lg cursor-pointer"
           >
             ✕
           </button>
         </div>
 
-        <p className="text-sm text-slate-300">
-          Customer: <span className="font-semibold">{customer.full_name}</span>
+        <p className="text-sm text-slate-600 font-medium">
+          Customer: <span className="font-bold text-slate-900">{customer.full_name}</span>
         </p>
 
         {error && (
-          <p className="text-sm text-red-400 bg-red-950/60 border border-red-700 rounded-md px-3 py-2">
+          <p className="text-xs text-red-555 bg-red-50 border border-red-200/60 rounded-2xl px-4 py-3 text-center font-bold">
             {error}
           </p>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1">Add Plates</label>
+            <label className="block text-[10px] font-extrabold text-slate-600 mb-1.5 uppercase tracking-wider">Add Plates</label>
             <input
               type="number"
               min={1}
-              className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-lg"
+              className="w-full glass-input px-3.5 py-2.5 text-sm"
               value={additionalPlates}
               onChange={e => setAdditionalPlates(e.target.value)}
             />
           </div>
 
           <div className="space-y-1">
-            <label className="inline-flex items-center gap-2 text-sm">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700 font-medium">
               <input
                 type="checkbox"
                 checked={hasExpiry}
@@ -112,7 +112,7 @@ export const RenewModal = ({ open, onClose, onUpdated, customer }: Props) => {
             {hasExpiry && (
               <input
                 type="date"
-                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                className="w-full glass-input px-3.5 py-2 text-sm"
                 value={expiryDate}
                 onChange={e => setExpiryDate(e.target.value)}
               />
@@ -123,14 +123,14 @@ export const RenewModal = ({ open, onClose, onUpdated, customer }: Props) => {
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 rounded-lg bg-slate-800 text-sm"
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 border border-slate-200 transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-lg bg-amber-400 text-black font-semibold text-sm disabled:opacity-60"
+              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white font-black text-xs transition-all shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-60"
             >
               {loading ? 'Updating…' : 'Renew'}
             </button>

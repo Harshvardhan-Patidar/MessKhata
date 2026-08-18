@@ -7,7 +7,7 @@ import { RenewModal } from '../components/RenewModal';
 import type { MenuData } from '../components/MenuModal';
 import { MenuModal } from '../components/MenuModal';
 import { useAuth } from '../context/AuthContext';
-import { Search, Utensils, Trash2 } from 'lucide-react';
+import { Search, Utensils, Trash2, UserPlus, LogOut } from 'lucide-react';
 
 type Filter = 'all' | 'active' | 'expiring' | 'expired' | 'archived';
 
@@ -138,11 +138,14 @@ export const DashboardPage = () => {
       const added = c.plates_added_today ?? 0;
       return sum + meals - added; // EAT ↑, +1 More ↓
     }, 0);
-  }, [customers]);
-
-  const handleOpenRenew = (customer: Customer) => {
+  }, [customers]);  const handleOpenRenew = (customer: Customer) => {
     setSelectedCustomer(customer);
     setRenewOpen(true);
+  };
+
+  const handleLogout = async () => {
+    localStorage.removeItem('admin_login_timestamp');
+    await signOut();
   };
 
   // Update just one customer in local state after an EAT action,
@@ -163,115 +166,127 @@ export const DashboardPage = () => {
   const hasAnyMenu = menuData && (menuData.morning.length > 0 || menuData.evening.length > 0);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
-      <header className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between gap-3">
+    <div className="min-h-screen text-slate-800 flex flex-col relative overflow-hidden">
+      <header className="sticky top-0 z-35 bg-surface-light dark:bg-surface-dark shadow-sm px-4 py-3.5 flex flex-row items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">MessKhata</h1>
-          <p className="text-xs text-slate-400">Fast mess management for Indian mess owners</p>
+          <h1 className="text-xl font-bold tracking-tight text-text-light dark:text-text-dark">MessKhata</h1>
+          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Fast mess management</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMenuOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 text-amber-400 text-sm font-semibold flex items-center gap-1 hover:bg-slate-700"
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-warning/10 text-warning hover:bg-warning/20 border border-warning/20 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            <Utensils className="w-4 h-4" />
+            <Utensils className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{hasAnyMenu ? 'Update Menu' : 'Add Menu'}</span>
           </button>
           <button
             onClick={() => setAddOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 text-amber-400 text-sm font-semibold flex items-center gap-1 hover:bg-slate-700"
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-105 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            + <span className="hidden sm:inline">Add Customer</span>
+            <UserPlus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Student</span>
           </button>
           <button
-            onClick={signOut}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-200 hover:bg-slate-700"
+            onClick={handleLogout}
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            Logout
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-6 pt-3 space-y-4">
+      <main className="flex-1 px-4 pb-8 pt-5 space-y-6 relative z-10">
         {/* Top stats */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-          <div className="bg-slate-900/80 rounded-xl p-3">
-            <p className="text-xs text-slate-400">Plates today</p>
-            <p className="text-xl font-bold text-primary">{totalPlatesServedToday}</p>
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 text-sm">
+          <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <p className="text-sm text-text-muted-light dark:text-text-muted-dark font-medium mb-1">Plates Today</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold">{totalPlatesServedToday}</span>
+            </div>
           </div>
-          <div className="bg-slate-900/80 rounded-xl p-3">
-            <p className="text-xs text-slate-400">Customers</p>
-            <p className="text-xl font-bold">{customers.length}</p>
+          <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <p className="text-sm text-text-muted-light dark:text-text-muted-dark font-medium mb-1">Total Customers</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold">{customers.length}</span>
+            </div>
           </div>
-          <div className="bg-slate-900/80 rounded-xl p-3">
-            <p className="text-xs text-slate-400">Filter</p>
-            <p className="text-xs capitalize">{filter}</p>
+          <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <p className="text-sm text-text-muted-light dark:text-text-muted-dark font-medium mb-1">Filter</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold capitalize">{filter}</span>
+            </div>
           </div>
-          <div className="bg-slate-900/80 rounded-xl p-3">
-            <p className="text-xs text-slate-400">Search</p>
-            <p className="text-xs truncate">{search || '—'}</p>
+          <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <p className="text-sm text-text-muted-light dark:text-text-muted-dark font-medium mb-1">Search</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold truncate max-w-full block">{search || '—'}</span>
+            </div>
           </div>
         </section>
 
         {/* Daily Menu Card */}
         {hasAnyMenu && (
-          <section className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 flex justify-between items-start gap-4">
-            <div className="flex-1">
-              <h2 className="text-sm font-bold text-amber-400 mb-2 flex items-center gap-2">
-                <Utensils className="w-4 h-4" /> {activeMenuTitle}
-              </h2>
-              {activeMenuItems.length > 0 ? (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
-                  {activeMenuItems.map((item, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm text-slate-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500/50" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-slate-500">No items listed for this shift.</p>
-              )}
+          <section className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Utensils className="w-5 h-5 text-warning" />
+                <h2 className="font-semibold text-lg text-warning">{activeMenuTitle}</h2>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMenuOpen(true)}
+                  className="text-sm text-text-muted-light dark:text-text-muted-dark flex items-center gap-1 hover:text-text-light dark:hover:text-text-dark transition-colors cursor-pointer"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDeleteMenu}
+                  className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Clear Menu"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="flex flex-col gap-2 shrink-0">
-              <button
-                onClick={() => setMenuOpen(true)}
-                className="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg"
-              >
-                Edit All
-              </button>
-              <button
-                onClick={handleDeleteMenu}
-                className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg flex items-center justify-center transition-colors"
-                title="Clear Menu"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+            {activeMenuItems.length > 0 ? (
+              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                {activeMenuItems.map((item, idx) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-text-muted-light dark:text-text-muted-dark">No items listed for this shift.</p>
+            )}
           </section>
         )}
 
         {/* Search + filters */}
         <section className="space-y-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted-light dark:text-text-muted-dark" />
             <input
-              className="w-full pl-10 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-base focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Search by name, mobile or customer ID…"
+              className="w-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark"
+              placeholder="Search name, mobile or ID..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto no-scrollbar text-xs">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             {(['all', 'active', 'expiring', 'expired', 'archived'] as Filter[]).map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full border ${filter === f
-                  ? 'bg-primary text-slate-950 font-semibold border-primary'
-                  : 'bg-slate-900 border-slate-700 text-slate-300'
-                  } capitalize whitespace-nowrap`}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+                  filter === f
+                    ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900'
+                    : 'bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 text-text-muted-light dark:text-text-muted-dark hover:bg-slate-100 dark:hover:bg-slate-800'
+                } capitalize`}
               >
                 {f}
               </button>
@@ -282,13 +297,13 @@ export const DashboardPage = () => {
         {/* Grid */}
         <section className="mt-2">
           {loading ? (
-            <p className="text-center text-sm text-slate-400">Loading customers…</p>
+            <p className="text-center text-sm text-slate-400 font-semibold py-8">Loading customers…</p>
           ) : customers.length === 0 ? (
-            <p className="text-center text-sm text-slate-400 mt-8">
+            <p className="text-center text-sm text-slate-400 font-semibold mt-12 py-10 glass-panel rounded-[24px]">
               No customers found. Try changing search/filter or add a new one.
             </p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {customers.map(c => (
                 <CustomerCard
                   key={c.id}
