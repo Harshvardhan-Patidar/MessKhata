@@ -1,0 +1,74 @@
+# MessKhata Bug & Vulnerability Report (Phase 2 - Update 2)
+
+During the comprehensive security audit and code analysis of the MessKhata application, several critical vulnerabilities and major bugs were discovered. This report outlines the issues, their severity, and recommendations for mitigation.
+
+## 1. Critical Vulnerability: Authentication Bypass via PostgREST Injection
+**Locations**: 
+- `supabase/phase 2/functions/admin-login/index.ts`
+- `supabase/phase 2/functions/admin-verify/index.ts`
+
+**Description**:
+The edge functions construct a Supabase `.or()` filter dynamically using string interpolation with unsanitized user input (`phone`). Because PostgREST uses commas `,` to separate conditions in an `.or()` query, a malicious user can input a ph one number containing a comma (e.g., `,phone.eq.+919876543210`) to inject arbitrary conditions. 
+
+**Impact**: 
+An attacker can completely bypass the phone number verification step. By injecting conditions, they can force the query to match *any* admin account without knowing their actual phone number.
+
+**Fix**:
+Replace the `.or(string)` syntax with the safer `.in()` syntax which parameterizes the array securely:
+```typescript
+.in('phone', [rawPhone, justDigits, phoneWith91, phoneWithPlus91, cleanPhone])
+```
+
+## 2. Critical Vulnerability: Hardcoded Master OTP Backdoor
+**Location**: 
+- `supabase/phase 2/functions/admin-verify/index.ts`
+
+**Description**:
+The `admin-verify` edge function contains a hardcoded backdoor that bypasses the OTP database check if the provided OTP matches a `MASTER_OTP` environment variable.
+
+**Impact**:
+When combined with the PostgREST injection vulnerability (Issue #1), an attacker can log into **any** admin account instantly using the master OTP, gaining full control over their customers and data. Even without Issue #1, any user who discovers or leaks the master OTP can hijack accounts if they know the phone number.
+
+**Fix**:
+Remove the `MASTER_OTP` bypass entirely for production environments. If a static OTP is needed for Apple/Google app store review, tightly bind it to a single, specific dummy phone number instead of allowing it globally.
+
+## 3. Security Flaw: Insecure Wildcard Matching (Name Bypass)
+**Locations**:
+- `supabase/phase 2/functions/admin-login/index.ts`
+- `supabase/phase 2/functions/student-login/index.ts`
+
+**Description**:
+The login functions use `.ilike('name', name.trim())` and `.ilike('full_name', full_name.trim())`. The `.ilike` method treats `%` and `_` as SQL wildcards. 
+
+**Impact**:
+An attacker can supply `%` as their name, which will evaluate to `.ilike('name', '%')`, matching *all* names in the database. This effectively disables the name verification requirement entirely.
+
+**Fix**:
+If exact case-insensitive matching is required without wildcard behavior, either manually escape the `%` and `_` characters in the user's input before passing it to `.ilike()`, or implement a case-insensitive collation at the database level and use `.eq()`.
+
+## 4. Major Bug: Search Bar Query Injection
+**Location**:
+- `src/pages/DashboardPage.tsx`
+
+**Description**:
+The admin dashboard search bar filters customers using an `.or()` query:
+```typescript
+query.or(`full_name.ilike.${like},mobile.ilike.${like},customer_code.ilike.${like}`)
+```
+If an admin types a comma `,` into the search bar, it breaks the PostgREST syntax parser and injects new, invalid query constraints.
+
+**Impact**:
+Typing a comma crashes the search functionality and prevents the customer list from loading. While this is not a severe security risk (due to RLS preventing data leakage across admins), it severely degrades the user experience and can cause confusing errors.
+
+**Fix**:
+Sanitize the search term by stripping out commas before appending it to the `.or()` filter, or construct the `.or()` filter string programmatically without relying on raw user input containing reserved characters.
+
+## 5. Security Flaw: Missing Security Checks in Database RPC (Resolved)
+**Location**:
+- `supabase/phase 2 Task/Task5.sql`
+
+**Description**:
+Previously, the `Task5.sql` script overrode the `consume_plate` and `add_plate` functions. In doing so, it accidentally deleted the Row Level Security enforcement `AND admin_id = auth.uid()` and removed the `INSERT INTO public.logs` code. 
+
+**Status**:
+**FIXED**. This vulnerability allowed IDOR (Insecure Direct Object Reference), where any admin could consume plates for another admin's customers. The SQL functions have already been corrected to restore `auth.uid()` checks and logging. No further action is required for this specific issue.

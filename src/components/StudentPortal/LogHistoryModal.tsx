@@ -45,7 +45,7 @@ export type LogHistoryModalProps = {
  * LogHistoryModal
  * 
  * Displays a glassmorphic modal containing a vertical timeline of the student's
- * activity (plates consumed, plans renewed) over the past 3 days.
+ * activity (plates consumed, plans renewed) over the past 15 days.
  * 
  * @param {LogHistoryModalProps} props The component props.
  * @returns {JSX.Element} The rendered modal component.
@@ -97,7 +97,7 @@ export const LogHistoryModal: React.FC<LogHistoryModalProps> = ({
                 </svg>
               </div>
               <p className="text-slate-300 font-medium">No recent activity</p>
-              <p className="text-slate-500 text-sm mt-1">No meals recorded in the past 3 days.</p>
+              <p className="text-slate-500 text-sm mt-1">No meals recorded in the past 15 days.</p>
             </div>
           ) : (
             <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">

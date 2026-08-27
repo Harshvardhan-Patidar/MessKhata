@@ -68,9 +68,9 @@ immediately does:
 ----------------------------------------------------------------------
 4. DATABASE SCHEMA & LOGIC FIXES (SQL)
 
-* Expiry Date Wipe Bug (renew_plan):
-  - Previously, calling the plan renewal database function with a null expiry parameter would overwrite and erase the customer's existing expiry date.
-  - Explanation: Used fallback logic (COALESCE) in the SQL update command. If a new expiration date is not supplied during renewal, the customer's existing expiration date is preserved instead of wiped.
+* Expiry Date Reset on Renewal Bug (renew_plan):
+  - Previously, calling the plan renewal database function without an expiry parameter would not clear the customer's existing expiry date due to a flawed coalesce logic.
+  - Explanation: Fixed the SQL update command. If a new expiration date is not supplied during renewal, the customer's existing expiration date is now properly wiped (set to null) so they can resume using the service without being blocked by an old expiry date.
 
 * Automated Profile Timestamps (customers):
   - Previously, changes to customer records did not automatically update their modification timestamp.
