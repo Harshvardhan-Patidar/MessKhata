@@ -36,6 +36,7 @@ type Customer = {
 export const StudentDashboardPage = () => {
   const navigate = useNavigate();
   const [enrollments, setEnrollments] = useState<Customer[] | null>(null);
+  const [activeEnrollmentIdx, setActiveEnrollmentIdx] = useState(0);
 
   // Modal State
   const [selectedMess, setSelectedMess] = useState<Customer | null>(null);
@@ -182,94 +183,113 @@ export const StudentDashboardPage = () => {
     }
   };
 
+  const student = enrollments[activeEnrollmentIdx] || enrollments[0];
+
   return (
-    <div className="min-h-screen bg-slate-950 px-4 py-8 text-slate-200 font-sans">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen text-text-light dark:text-text-dark pb-20">
+      <div className="max-w-4xl mx-auto space-y-8 px-4 py-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between bg-slate-900/50 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm sticky top-4 z-10 shadow-lg">
+        <div className="flex items-center justify-between bg-surface-light dark:bg-surface-dark p-4 rounded-2xl border border-slate-200 dark:border-slate-800 sticky top-4 z-10 shadow-sm">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            <h1 className="text-xl md:text-2xl font-bold text-text-light dark:text-text-dark">
               Student Portal
             </h1>
-            <p className="text-xs text-slate-400">Welcome back, {enrollments[0]?.full_name}</p>
+            <p className="text-xs text-text-muted-light dark:text-text-muted-dark">Welcome back, {enrollments[0]?.full_name}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="text-sm px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all border border-slate-700 hover:border-slate-500 shadow-sm"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl transition-all cursor-pointer"
           >
             Logout
           </button>
         </div>
 
-        {/* Enrollments List */}
+        {/* Tab Switcher if multiple messes */}
+        {enrollments.length > 1 && (
+          <div className="bg-slate-100/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 px-4 py-3 rounded-2xl flex gap-2 overflow-x-auto no-scrollbar shrink-0 shadow-sm">
+            {enrollments.map((enrollment, idx) => (
+              <button
+                key={enrollment.id}
+                onClick={() => setActiveEnrollmentIdx(idx)}
+                className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  activeEnrollmentIdx === idx
+                    ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900 shadow-sm font-bold'
+                    : 'bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 text-text-muted-light dark:text-text-muted-dark hover:bg-slate-100 dark:hover:bg-slate-850'
+                }`}
+              >
+                {enrollment.mess_name || 'Mess'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Active Mess Enrollment Display */}
         <div className="space-y-6">
-          {enrollments.map((student) => {
+          {(() => {
             const statusColor =
-              student.status === 'active' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                student.status === 'expired' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                  'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+              student.status === 'active' ? 'bg-emerald-500 text-white border-transparent' :
+                student.status === 'expired' ? 'bg-red-500 text-white border-transparent' :
+                  'bg-amber-500 text-white border-transparent';
 
             return (
-              <div key={student.id} className="bg-slate-900/80 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-slate-800 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-colors">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden transition-all">
 
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-800 pb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
                   <div>
-                    <span className="text-xs font-semibold tracking-wider text-slate-500 uppercase mb-1 block">Enrolled At</span>
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <span className="text-xs font-semibold tracking-wider text-text-muted-light dark:text-text-muted-dark uppercase mb-1 block">Enrolled At</span>
+                    <h2 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
                       {student.mess_name || 'MessKhata Partner'}
                     </h2>
                     {student.admin_name && (
-                      <p className="text-sm text-slate-400 mt-1">Admin: {student.admin_name}</p>
+                      <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1 font-semibold">Operator: {student.admin_name}</p>
                     )}
                   </div>
-                  <span className={`mt-2 md:mt-0 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide border shadow-sm ${statusColor}`}>
-                    {student.status.toUpperCase()}
+                  <span className={`mt-2 md:mt-0 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide border shadow-sm uppercase ${statusColor}`}>
+                    {student.status}
                   </span>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-8 items-center md:items-start relative z-10">
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center shadow-lg shrink-0 border border-slate-600">
-                    <span className="text-2xl md:text-3xl font-bold text-slate-300">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-slate-105 dark:bg-slate-800 flex items-center justify-center shadow-sm shrink-0 border border-slate-200 dark:border-slate-700">
+                    <span className="text-2xl md:text-3xl font-bold text-slate-700 dark:text-slate-350 select-none">
                       {student.full_name.charAt(0).toUpperCase()}
                     </span>
                   </div>
 
                   <div className="flex-1 text-center md:text-left space-y-2 w-full">
-                    <div className="flex flex-col md:flex-row gap-4 text-sm text-slate-400 bg-slate-800/30 p-3 rounded-xl border border-slate-800/50">
-                      <p>Mobile: <span className="text-slate-200">{student.mobile}</span></p>
-                      <div className="hidden md:block w-px h-4 bg-slate-700"></div>
-                      <p>ID: <span className="text-slate-200 font-mono tracking-wider">{student.customer_code || 'N/A'}</span></p>
+                    <div className="flex flex-col md:flex-row gap-4 text-sm text-text-muted-light dark:text-text-muted-dark bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-105 dark:border-slate-800/50">
+                      <p>Mobile: <span className="text-text-light dark:text-text-dark font-bold">{student.mobile}</span></p>
+                      <div className="hidden md:block w-px h-4 bg-slate-200 dark:bg-slate-750"></div>
+                      <p>ID: <span className="text-text-light dark:text-text-dark font-mono font-bold tracking-wider">{student.customer_code || 'N/A'}</span></p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
 
-                      <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 flex flex-col items-center justify-center text-center">
-                        <span className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">Plan</span>
-                        <span className="font-semibold text-white capitalize text-sm">
+                      <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-105 dark:border-slate-800/50 flex flex-col items-center justify-center text-center">
+                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark mb-1 uppercase tracking-wider font-semibold">Plan</span>
+                        <span className="font-bold text-text-light dark:text-text-dark capitalize text-sm">
                           {student.current_plan_type.replace('_', ' ')}
                         </span>
                       </div>
 
-                      <div className="bg-slate-800/80 rounded-2xl p-4 border border-primary/30 flex flex-col items-center justify-center text-center shadow-[0_0_15px_rgba(34,197,94,0.1)]">
-                        <span className="text-xs text-primary/80 mb-1 uppercase tracking-wider font-semibold">Remaining</span>
-                        <span className="text-3xl font-bold text-primary">
+                      <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-105 dark:border-slate-800/50 flex flex-col items-center justify-center text-center shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+                        <span className="text-xs text-accent mb-1 uppercase tracking-wider font-semibold">Remaining</span>
+                        <span className="text-3xl font-black text-accent">
                           {student.remaining_plates ?? '∞'}
                         </span>
                       </div>
 
-                      <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 flex flex-col items-center justify-center text-center">
-                        <span className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">Total</span>
-                        <span className="font-semibold text-white text-lg">
+                      <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-105 dark:border-slate-800/50 flex flex-col items-center justify-center text-center">
+                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark mb-1 uppercase tracking-wider font-semibold">Total</span>
+                        <span className="font-bold text-text-light dark:text-text-dark text-lg">
                           {student.total_plates ?? '0'}
                         </span>
                       </div>
 
-                      <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 flex flex-col items-center justify-center text-center">
-                        <span className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">Last Visit</span>
-                        <span className="font-semibold text-white text-sm">
+                      <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-105 dark:border-slate-800/50 flex flex-col items-center justify-center text-center">
+                        <span className="text-xs text-text-muted-light dark:text-text-muted-dark mb-1 uppercase tracking-wider font-semibold">Last Visit</span>
+                        <span className="font-bold text-text-light dark:text-text-dark text-sm">
                           {student.last_visit_at ? new Date(student.last_visit_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Never'}
                         </span>
                       </div>
@@ -281,13 +301,13 @@ export const StudentDashboardPage = () => {
                       if (!activeMenu || !activeMenu.items || activeMenu.items.length === 0) return null;
 
                       return (
-                        <div className="mt-5 bg-slate-800/40 rounded-2xl p-4 border border-slate-700/60 shadow-inner">
-                          <h3 className="text-sm font-bold text-slate-200 mb-2">{activeMenu.title}</h3>
+                        <div className="mt-5 bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-105 dark:border-slate-800/80 shadow-inner">
+                          <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-2">{activeMenu.title}</h3>
                           <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {activeMenu.items.map((item, idx) => (
-                              <li key={idx} className="flex items-center gap-2 text-sm text-slate-300">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
-                                {item}
+                              <li key={idx} className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
+                                <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0"></span>
+                                <span>{item}</span>
                               </li>
                             ))}
                           </ul>
@@ -301,9 +321,9 @@ export const StudentDashboardPage = () => {
                           onClick={() => handleWhatsAppSkip(student, 'Morning')}
                           disabled={!isMorningActive}
                           title={!isMorningActive ? "Morning skip deadline (9:30 AM) has passed" : "Notify admin to skip morning tiffin"}
-                          className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-sm font-semibold transition-all border flex items-center justify-center gap-2 ${isMorningActive
-                            ? "bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-yellow-500/50 text-yellow-400"
-                            : "bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed"
+                          className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-sm font-semibold transition-all border flex items-center justify-center gap-2 cursor-pointer ${isMorningActive
+                            ? "bg-warning/10 hover:bg-warning/20 border-warning/20 text-warning"
+                            : "bg-slate-100/50 dark:bg-slate-800/50 border-slate-200/40 text-slate-400 cursor-not-allowed"
                             }`}
                         >
                           Skip Morning ☀️
@@ -313,9 +333,9 @@ export const StudentDashboardPage = () => {
                           onClick={() => handleWhatsAppSkip(student, 'Evening')}
                           disabled={!isEveningActive}
                           title={!isEveningActive ? "Evening skip deadline (4:30 PM) has passed" : "Notify admin to skip evening tiffin"}
-                          className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-sm font-semibold transition-all border flex items-center justify-center gap-2 ${isEveningActive
-                            ? "bg-slate-800 hover:bg-slate-700 border-slate-700 hover:border-blue-400/50 text-blue-300"
-                            : "bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed"
+                          className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-sm font-semibold transition-all border flex items-center justify-center gap-2 cursor-pointer ${isEveningActive
+                            ? "bg-indigo-500/10 hover:bg-indigo-550/20 border-indigo-500/20 text-indigo-650"
+                            : "bg-slate-100/50 dark:bg-slate-800/50 border-slate-200/40 text-slate-400 cursor-not-allowed"
                             }`}
                         >
                           Skip Evening 🌙
@@ -324,7 +344,7 @@ export const StudentDashboardPage = () => {
 
                       <button
                         onClick={() => fetchLogs(student)}
-                        className="w-full md:w-auto px-6 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-green-500/50 rounded-xl text-green-400 font-semibold transition-all flex items-center justify-center gap-2"
+                        className="w-full md:w-auto px-6 py-2 bg-slate-105 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-750 text-slate-700 dark:text-slate-350 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -337,7 +357,7 @@ export const StudentDashboardPage = () => {
                 </div>
               </div>
             );
-          })}
+          })()}
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircle, PhoneCall } from 'lucide-react';
+import { MessageCircle, PhoneCall, Utensils } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { supabase } from '../lib/supabaseClient';
 
@@ -119,149 +119,153 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
   };
 
   const handleArchive = async () => {
-    const { error } = await supabase
-      .from('customers')
-      .update({ status: 'archived' })
-      .eq('id', customer.id);
-    if (!error) onArchive();
+    if (window.confirm(`Are you sure you want to archive ${customer.full_name}?`)) {
+      const { error } = await supabase
+        .from('customers')
+        .update({ status: 'archived' })
+        .eq('id', customer.id);
+      if (!error) onArchive();
+    }
   };
 
   const waLink = `https://wa.me/91${customer.mobile}?text=${encodeURIComponent(
     `Hello ${customer.full_name}, your mess plan is over. Please renew.`
   )}`;
 
-  const statusColor =
-    customer.status === 'active'
-      ? 'bg-emerald-500/20 text-emerald-300'
-      : customer.status === 'expired'
-        ? 'bg-red-500/20 text-red-300'
-        : 'bg-slate-600/40 text-slate-200';
+  const initials = (customer.full_name || '')
+    .trim()
+    .split(/\s+/)
+    .map(w => w[0])
+    .filter(Boolean)
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '??';
 
   return (
-    <div className="bg-slate-900/80 rounded-2xl p-4 flex flex-col gap-3 shadow-lg">
-      {/* ── Top row: avatar + info + WhatsApp ── */}
-      <div className="flex items-center gap-3">
-        <img
-          src={
-            customer.photo_url ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.full_name)}`
-          }
-          alt={customer.full_name}
-          className="w-14 h-14 rounded-full object-cover border border-slate-700"
-        />
-        <div className="flex-1 min-w-0">
+    <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col justify-between">
+      <div className="p-4 flex-1 flex flex-col justify-between">
+        {/* Card Header block with grey background and border */}
+        <div className="flex items-start justify-between mb-4 bg-slate-50 dark:bg-slate-800/50 -mx-4 -mt-4 p-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            {customer.photo_url ? (
+              <img
+                src={customer.photo_url}
+                alt={customer.full_name}
+                className="w-12 h-12 rounded-full object-cover border border-slate-200"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg font-semibold text-slate-700 dark:text-slate-300">
+                {initials}
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg text-text-light dark:text-text-dark">{customer.full_name}</h3>
+                {customer.customer_code && (
+                  <span className="text-xs bg-slate-100 dark:bg-slate-800 text-text-muted-light dark:text-text-muted-dark px-1.5 py-0.5 rounded">
+                    ID: {customer.customer_code}
+                  </span>
+                )}
+              </div>
+              <button
+                className="flex items-center gap-1 text-sm text-accent dark:text-accent-dark font-medium cursor-pointer"
+                onClick={() => (window.location.href = `tel:${customer.mobile}`)}
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>{customer.mobile}</span>
+              </button>
+              {expiry && (
+                <p className="text-[10px] text-text-muted-light dark:text-text-muted-dark mt-0.5 font-medium">
+                  Expires: {format(expiry, 'dd MMM, hh:mm a')}
+                </p>
+              )}
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            <div className="text-lg font-semibold truncate">{customer.full_name}</div>
-            {customer.customer_code && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-200 shrink-0">
-                ID: {customer.customer_code}
-              </span>
+            {isExpiredNow && (
+              <button
+                onClick={() => window.open(waLink, '_blank')}
+                className="text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
+                aria-label="WhatsApp reminder"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </button>
+            )}
+            <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider shadow-sm ${
+              customer.status === 'active'
+                ? 'bg-emerald-500 text-white'
+                : customer.status === 'expired'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-slate-500 text-white'
+            }`}>
+              {customer.status}
+            </span>
+          </div>
+        </div>
+
+        {/* Stats Row + Vertical Actions Column */}
+        <div className="flex items-end justify-between mb-4">
+          <div>
+            <p className="text-xs text-text-muted-light dark:text-text-muted-dark mb-1 uppercase tracking-wider font-medium font-semibold">Remaining Plates</p>
+            <div className="text-4xl font-black text-text-light dark:text-text-dark">{remaining}</div>
+            {typeof customer.total_plates === 'number' && (
+              <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">Lifetime total: {customer.total_plates}</p>
             )}
           </div>
-          <button
-            className="flex items-center gap-1 text-xs text-sky-400"
-            onClick={() => (window.location.href = `tel:${customer.mobile}`)}
-          >
-            <PhoneCall className="w-4 h-4" /> {customer.mobile}
-          </button>
-          {expiry && (
-            <p className="text-xs text-slate-400 mt-1">
-              Expires: {format(expiry, 'dd MMM, hh:mm a')}
-            </p>
-          )}
-        </div>
-        {isExpiredNow && (
-          <button
-            onClick={() => window.open(waLink, '_blank')}
-            className="text-green-400 hover:text-green-300"
-            aria-label="WhatsApp reminder"
-          >
-            <MessageCircle className="w-6 h-6" />
-          </button>
-        )}
-      </div>
-
-      {/* ── Mid row: plates + status badge ── */}
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs text-slate-400">Remaining Plates</p>
-          <p className={`text-3xl font-extrabold ${canEat ? 'text-primary' : 'text-red-500'}`}>
-            {remaining}
-          </p>
-          {typeof customer.total_plates === 'number' && (
-            <p className="text-[11px] text-slate-500">
-              Lifetime total: {customer.total_plates}
-            </p>
-          )}
-
-          {/* Plates today counter: EAT increases, +1 More decreases */}
-          <div className="mt-1.5 flex items-baseline gap-1">
-            <span className="text-2xl font-extrabold text-amber-400 leading-none">
-              {mealsToday - platesAddedToday}
-            </span>
-            <span className="text-[10px] text-slate-400">plates today</span>
+          <div className="flex flex-col gap-2 shrink-0">
+            <button
+              onClick={handleAddPlate}
+              disabled={!canAddPlate || isAdding}
+              title={
+                (mealsToday - platesAddedToday) <= 0
+                  ? 'Can only refund after eating a plate today'
+                  : 'Refund 1 Plate'
+              }
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center"
+            >
+              {isAdding ? '…' : '+1 More'}
+            </button>
+            <button
+              onClick={onRenew}
+              className="px-4 py-2 bg-warning/10 hover:bg-warning/20 text-warning text-sm font-bold rounded-lg transition-colors border border-warning/20 cursor-pointer text-center"
+            >
+              RENEW
+            </button>
+            <button
+              onClick={handleArchive}
+              className="px-4 py-1.5 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-red-500/10 hover:text-red-650 hover:border-red-500/20 border border-transparent rounded-lg text-[10px] text-text-muted-light dark:text-text-muted-dark transition-colors cursor-pointer text-center"
+            >
+              Remove
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <span className={`px-2 py-1 rounded-full text-[11px] uppercase ${statusColor}`}>
-            {customer.status}
-          </span>
-
-          {/* Refund Plate button */}
-          <button
-            onClick={handleAddPlate}
-            disabled={!canAddPlate || isAdding}
-            title={
-              (mealsToday - platesAddedToday) <= 0
-                ? 'Can only refund after eating a plate today'
-                : 'Refund 1 Plate'
-            }
-            className={`px-4 py-2 rounded-lg text-sm font-bold w-28 transition-colors ${canAddPlate && !isAdding
-              ? 'bg-amber-500 hover:bg-amber-400 text-black'
-              : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              }`}
-          >
-            {isAdding ? '…' : '+1 More'}
-          </button>
-          {addError && (
-            <p className="text-[10px] text-red-400 text-right max-w-[7rem] leading-tight">
-              {addError}
-            </p>
-          )}
-
-          <button
-            onClick={onRenew}
-            className="px-4 py-1 rounded-lg text-sm font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 w-28"
-          >
-            RENEW
-          </button>
-
-          <button
-            onClick={handleArchive}
-            className="px-4 py-1 rounded-lg text-[11px] bg-slate-800 text-slate-300 hover:bg-slate-700 w-28"
-          >
-            Remove
-          </button>
+        {/* Plates today */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-lg font-bold text-warning">{mealsToday - platesAddedToday}</span>
+          <span className="text-xs text-text-muted-light dark:text-text-muted-dark">plates today</span>
         </div>
-      </div>
 
-      {/* ── Bottom: EAT button full-width green ── */}
-      <button
-        onClick={handleEat}
-        disabled={!canEat || isEating}
-        className={`w-full py-3 rounded-xl text-lg font-bold tracking-wide transition-colors ${canEat && !isEating
-          ? 'bg-green-600 hover:bg-green-500 active:bg-green-700 text-white'
-          : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-          }`}
-      >
-        {isEating ? 'Please wait…' : 'EAT'}
-      </button>
-      {eatError && (
-        <p className="text-[10px] text-red-400 text-center leading-tight -mt-1">
-          {eatError}
-        </p>
-      )}
+        {/* EAT Button */}
+        <button
+          onClick={handleEat}
+          disabled={!canEat || isEating}
+          className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-2xl rounded-xl shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 active:scale-[0.95] cursor-pointer"
+        >
+          <Utensils className="w-6 h-6" />
+          <span>EAT</span>
+        </button>
+        {eatError && (
+          <p className="text-xs text-red-550 text-center mt-2 leading-tight font-semibold">
+            {eatError}
+          </p>
+        )}
+        {addError && (
+          <p className="text-xs text-red-550 text-center mt-2 leading-tight font-semibold">
+            {addError}
+          </p>
+        )}
+      </div>
     </div>
   );
 };

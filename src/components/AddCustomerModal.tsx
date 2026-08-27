@@ -291,29 +291,29 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
       )}
 
       {/* ── Add Customer modal ────────────────────────────────────── */}
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 px-3">
-        <div className="w-full max-w-md bg-slate-900 rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-40 px-3">
+        <div className="w-full max-w-md glass-panel rounded-[24px] p-6 space-y-4 max-h-[90vh] overflow-y-auto relative">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Add Customer</h2>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">Add Customer</h2>
             <button
               onClick={handleClose}
-              className="text-slate-400 hover:text-slate-200 text-lg"
+              className="text-slate-450 hover:text-slate-700 text-lg transition-colors cursor-pointer"
             >
               ✕
             </button>
           </div>
 
           {error && (
-            <p className="text-sm text-red-400 bg-red-950/60 border border-red-700 rounded-md px-3 py-2">
+            <p className="text-xs text-red-550 bg-red-50 border border-red-200/60 rounded-2xl px-4 py-3 text-center font-bold">
               {error}
             </p>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm mb-1">Customer ID (unique)</label>
+              <label className="block text-[10px] font-extrabold text-slate-600 mb-1.5 uppercase tracking-wider">Customer ID (unique)</label>
               <input
-                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-lg"
+                className="w-full glass-input px-3.5 py-2.5 text-sm"
                 value={customerCode}
                 onChange={e => setCustomerCode(e.target.value)}
                 placeholder="e.g. 101"
@@ -321,9 +321,9 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
             </div>
 
             <div>
-              <label className="block text-sm mb-1">Full Name</label>
+              <label className="block text-[10px] font-extrabold text-slate-600 mb-1.5 uppercase tracking-wider">Full Name</label>
               <input
-                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-lg"
+                className="w-full glass-input px-3.5 py-2.5 text-sm"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 autoFocus
@@ -331,9 +331,9 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
             </div>
 
             <div>
-              <label className="block text-sm mb-1">Mobile</label>
+              <label className="block text-[10px] font-extrabold text-slate-600 mb-1.5 uppercase tracking-wider">Mobile</label>
               <input
-                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-lg"
+                className="w-full glass-input px-3.5 py-2.5 text-sm"
                 value={mobile}
                 onChange={e => setMobile(e.target.value)}
                 inputMode="tel"
@@ -343,27 +343,27 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
 
             {/* ── Photo capture ── */}
             <div>
-              <label className="block text-sm mb-1">Photo</label>
+              <label className="block text-[10px] font-extrabold text-slate-600 mb-1.5 uppercase tracking-wider">Photo</label>
 
               {photoPreview ? (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <img
                     src={photoPreview}
                     alt="Preview"
-                    className="w-16 h-16 rounded-full object-cover border-2 border-amber-400"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-primary/50 shadow-md shadow-primary/10"
                   />
                   <div className="flex flex-col gap-1.5">
                     <button
                       type="button"
                       onClick={openCamera}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-bold transition-all cursor-pointer"
                     >
                       <Camera className="w-3.5 h-3.5" /> Retake
                     </button>
                     <button
                       type="button"
                       onClick={clearPhoto}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-400"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/20 text-slate-500 text-xs font-bold transition-all cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" /> Remove
                     </button>
@@ -373,32 +373,32 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
                 <button
                   type="button"
                   onClick={openCamera}
-                  className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-600 hover:border-amber-400 bg-slate-800/60 hover:bg-slate-800 transition-colors py-5"
+                  className="w-full flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary/50 bg-slate-50/50 hover:bg-slate-100/50 transition-all py-6 cursor-pointer"
                 >
-                  <Camera className="w-8 h-8 text-amber-400" />
-                  <span className="text-sm font-medium text-slate-300">Open Camera</span>
-                  <span className="text-[11px] text-slate-500">Tap to take a live photo</span>
+                  <Camera className="w-8 h-8 text-primary" />
+                  <span className="text-sm font-bold text-slate-700">Open Camera</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Tap to take a live photo</span>
                 </button>
               )}
             </div>
 
             <div>
-              <label className="block text-sm mb-1">Plan</label>
+              <label className="block text-[10px] font-extrabold text-slate-600 mb-1.5 uppercase tracking-wider">Plan</label>
               <div className="flex gap-2">
                 <select
                   value={plan}
                   onChange={e => setPlan(e.target.value as PlanPreset)}
-                  className="flex-1 rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                  className="flex-1 glass-input px-3 py-2.5 text-sm"
                 >
                   {planOptions.map(p => (
-                    <option key={p.value} value={p.value}>{p.label}</option>
+                    <option key={p.value} value={p.value} className="bg-white text-slate-800">{p.label}</option>
                   ))}
                 </select>
                 {plan === 'custom' && (
                   <input
                     type="number"
                     min={1}
-                    className="w-24 rounded-lg bg-slate-800 border border-slate-700 px-2 py-2 text-sm"
+                    className="w-24 glass-input px-2.5 py-2 text-sm"
                     value={customPlates}
                     onChange={e => setCustomPlates(e.target.value)}
                     placeholder="Plates"
@@ -408,7 +408,7 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
             </div>
 
             <div className="space-y-1">
-              <label className="inline-flex items-center gap-2 text-sm">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700 font-medium">
                 <input
                   type="checkbox"
                   checked={hasExpiry}
@@ -419,12 +419,12 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
               {hasExpiry && (
                 <input
                   type="date"
-                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                  className="w-full glass-input px-3.5 py-2 text-sm"
                   value={expiryDate}
                   onChange={e => setExpiryDate(e.target.value)}
                 />
               )}
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[10px] text-slate-500 font-semibold mt-1">
                 Leave unchecked for no expiry (unlimited time).
               </p>
             </div>
@@ -433,14 +433,14 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-4 py-2 rounded-lg bg-slate-800 text-sm"
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 border border-slate-200 transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-5 py-2 rounded-lg bg-primary text-black font-semibold text-sm disabled:opacity-60"
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white font-black text-xs transition-all shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-60"
               >
                 {loading ? 'Saving…' : 'Save Customer'}
               </button>

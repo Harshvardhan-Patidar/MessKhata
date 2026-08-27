@@ -37,20 +37,20 @@ export const MenuModal = ({ open, onClose, onSave, initialData }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 px-3 overflow-y-auto py-10">
-      <div className="w-full max-w-md bg-slate-900 rounded-2xl p-5 space-y-4 shadow-2xl">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-40 px-3 overflow-y-auto py-10">
+      <div className="w-full max-w-md glass-panel rounded-[24px] p-6 space-y-4 shadow-2xl relative">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Today's Menu</h2>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-200 text-lg">✕</button>
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">Today's Menu</h2>
+          <button type="button" onClick={onClose} className="text-slate-450 hover:text-slate-700 transition-colors text-lg cursor-pointer">✕</button>
         </div>
 
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1 text-slate-300 font-semibold">
+            <label className="block text-[10px] font-extrabold text-slate-600 mb-1.5 uppercase tracking-wider">
               🌅 Morning Menu (Shows 5 AM to 5 PM)
             </label>
             <textarea
-              className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px] resize-none"
+              className="w-full glass-input px-3.5 py-3 text-sm min-h-[100px] resize-none placeholder-slate-400"
               value={morningText}
               onChange={e => setMorningText(e.target.value)}
               placeholder="e.g.&#10;Idli Sambar&#10;Poha"
@@ -59,11 +59,11 @@ export const MenuModal = ({ open, onClose, onSave, initialData }: Props) => {
           </div>
 
           <div>
-            <label className="block text-sm mb-1 text-slate-300 font-semibold">
+            <label className="block text-[10px] font-extrabold text-slate-600 mb-1.5 uppercase tracking-wider">
               🌆 Evening Menu (Shows 5 PM to 5 AM)
             </label>
             <textarea
-              className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px] resize-none"
+              className="w-full glass-input px-3.5 py-3 text-sm min-h-[100px] resize-none placeholder-slate-400"
               value={eveningText}
               onChange={e => setEveningText(e.target.value)}
               placeholder="e.g.&#10;Dal Makhani&#10;Roti"
@@ -71,8 +71,8 @@ export const MenuModal = ({ open, onClose, onSave, initialData }: Props) => {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-slate-800 text-sm hover:bg-slate-700">Cancel</button>
-            <button type="submit" className="px-5 py-2 rounded-lg bg-primary text-slate-950 font-bold text-sm hover:bg-green-500">Save Menu</button>
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 border border-slate-200 transition-all cursor-pointer">Cancel</button>
+            <button type="submit" className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white font-black text-xs transition-all shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer">Save Menu</button>
           </div>
         </form>
       </div>
