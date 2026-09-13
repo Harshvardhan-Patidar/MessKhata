@@ -218,7 +218,10 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
     }).select('*').single();
 
     setLoading(false);
-    if (error) { setError(error.message); return; }
+    if (error) { 
+      setError(error.message.includes('unique constraint') ? 'Customer ID already exists.' : 'Failed to add customer. Please try again.'); 
+      return; 
+    }
 
     reset();
     onCreated(newCustomer as Customer);

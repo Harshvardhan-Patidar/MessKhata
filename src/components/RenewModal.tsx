@@ -52,7 +52,7 @@ export const RenewModal = ({ open, onClose, onUpdated, customer }: Props) => {
 
     setLoading(false);
     if (error) {
-      setError(error.message);
+      setError('Failed to renew plan. Please try again or check customer status.');
       return;
     }
 

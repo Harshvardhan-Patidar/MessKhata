@@ -126,7 +126,8 @@ export const StudentDashboardPage = () => {
         setLogs(data.logs);
       }
     } catch (err) {
-      setLogsError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setLogsError(msg.includes('Edge Function returned a non-2xx status code') ? 'Failed to load meal history. Please try again later.' : msg);
     } finally {
       setLoadingLogs(false);
     }

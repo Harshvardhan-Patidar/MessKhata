@@ -44,7 +44,8 @@ export const LoginPage = () => {
 
       setAdminStep('verify');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg.includes('Edge Function returned a non-2xx status code') ? 'User not present' : msg);
     } finally {
       setLoading(false);
     }
@@ -76,7 +77,8 @@ export const LoginPage = () => {
         throw new Error('Invalid response from server');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg.includes('Edge Function returned a non-2xx status code') ? 'Invalid OTP or user not present' : msg);
     } finally {
       setLoading(false);
     }
@@ -105,7 +107,8 @@ export const LoginPage = () => {
         throw new Error('Invalid response from server');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg.includes('Edge Function returned a non-2xx status code') ? 'Student not present' : msg);
     } finally {
       setLoading(false);
     }
