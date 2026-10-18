@@ -78,9 +78,9 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err: unknown) {
-    console.error(err)
+    console.error('[student-logs] Unhandled error:', err)
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Internal Server Error' }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

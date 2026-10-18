@@ -92,7 +92,8 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
     });
     setIsEating(false);
     if (error) {
-      setEatError(error.message);
+      console.error('[CustomerCard] consume_plate error:', error);
+      setEatError('Failed to record meal. Please try again.');
       return;
     }
     if (data) {
@@ -110,7 +111,8 @@ export const CustomerCard = ({ customer, onEatUpdated, onRenew, onArchive }: Pro
     });
     setIsAdding(false);
     if (error) {
-      setAddError(error.message);
+      console.error('[CustomerCard] add_plate error:', error);
+      setAddError('Failed to add plate. Please try again.');
       return;
     }
     if (data) {

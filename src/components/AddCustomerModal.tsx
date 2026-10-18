@@ -181,7 +181,11 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
     // Upload captured photo if present
     let uploadedPhotoUrl: string | null = null;
     if (photoPreview) {
-      const file = dataUrlToFile(photoPreview, `${customerCode.trim()}_${Date.now()}.jpg`);
+      // Sanitize customerCode before using it in the storage path.
+      // A customerCode like '../../etc/config' could escape the bucket prefix.
+      // Allow only alphanumeric, hyphens, and underscores.
+      const safeCode = customerCode.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+      const file = dataUrlToFile(photoPreview, `${safeCode}_${Date.now()}.jpg`);
 
       // Guard: reject photos larger than 2 MB
       const MAX_PHOTO_SIZE = 2 * 1024 * 1024; // 2 MB

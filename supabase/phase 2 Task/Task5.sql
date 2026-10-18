@@ -7,6 +7,7 @@ CREATE OR REPLACE FUNCTION consume_plate(p_customer_id UUID, p_count INT)
 RETURNS public.customers
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_customer public.customers;
@@ -58,6 +59,7 @@ CREATE OR REPLACE FUNCTION add_plate(p_customer_id UUID, p_count INT)
 RETURNS public.customers
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_customer public.customers;

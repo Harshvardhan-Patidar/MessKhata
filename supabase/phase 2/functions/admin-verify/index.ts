@@ -35,6 +35,21 @@ serve(async (req) => {
       })
     }
 
+    // OTP must be exactly 6 digits — reject anything else to prevent crafted payloads.
+    const rawPhoneTrimmed = phone.trim()
+    if (rawPhoneTrimmed.length > 15 || !/^\+?[0-9]{7,15}$/.test(rawPhoneTrimmed)) {
+      return new Response(JSON.stringify({ error: 'Invalid phone number format' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
+    if (!/^[0-9]{6}$/.test(otp.trim())) {
+      return new Response(JSON.stringify({ error: 'Invalid OTP format' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -190,9 +205,9 @@ serve(async (req) => {
       status: 200,
     })
   } catch (error: unknown) {
-    console.error(error)
+    console.error('[admin-verify] Unhandled error:', error)
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal Server Error' }),
+      JSON.stringify({ error: 'Internal server error' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

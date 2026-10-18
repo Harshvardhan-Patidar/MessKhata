@@ -21,6 +21,23 @@ serve(async (req) => {
       })
     }
 
+    // A 100 KB name string would generate an extremely expensive LIKE query.
+    if (name.trim().length > 100) {
+      return new Response(JSON.stringify({ error: 'Name is too long (max 100 characters)' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
+
+    // Reject anything that could craft malformed .or() filter strings in the query below.
+    const rawPhoneTrimmed = phone.trim()
+    if (rawPhoneTrimmed.length > 15 || !/^\+?[0-9]{7,15}$/.test(rawPhoneTrimmed)) {
+      return new Response(JSON.stringify({ error: 'Invalid phone number format' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -101,9 +118,9 @@ serve(async (req) => {
       status: 200,
     })
   } catch (error: unknown) {
-    console.error(error)
+    console.error('[admin-login] Unhandled error:', error)
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal Server Error' }),
+      JSON.stringify({ error: 'Internal server error' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

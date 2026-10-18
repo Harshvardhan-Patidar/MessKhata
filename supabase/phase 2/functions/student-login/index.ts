@@ -24,6 +24,25 @@ serve(async (req) => {
       )
     }
 
+    const rawMobileTrimmed = mobile.trim()
+    if (rawMobileTrimmed.length > 15 || !/^\+?[0-9]{7,15}$/.test(rawMobileTrimmed)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid mobile number format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Cap name length and strip SQL LIKE wildcards (%, _) from full_name.
+    // An attacker could craft a name like '%' to match ALL rows in the ilike() query,
+    // bypassing the identity check before the customer_code filter is applied.
+    if (full_name.trim().length > 100) {
+      return new Response(
+        JSON.stringify({ error: 'Name is too long (max 100 characters)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    const safeName = full_name.trim().replace(/[%_]/g, '')
+
     // Validate mobile number format
     const cleanMobile = mobile.replace('+91', '').replace(/\D/g, '')
     if (!INDIA_MOBILE_REGEX.test(cleanMobile)) {
@@ -55,7 +74,7 @@ serve(async (req) => {
         customer_code,
         admin_id
       `)
-      .ilike('full_name', full_name.trim())
+      .ilike('full_name', safeName)
       .in('mobile', [mobile, cleanMobile, `+91${cleanMobile}`])
 
     if (error || !enrollments || enrollments.length === 0) {
@@ -102,9 +121,9 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err: unknown) {
-    console.error(err)
+    console.error('[student-login] Unhandled error:', err)
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Internal Server Error' }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
