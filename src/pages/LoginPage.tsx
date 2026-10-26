@@ -115,7 +115,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 gap-4">
       <div className="w-full max-w-sm bg-slate-900/90 backdrop-blur rounded-2xl shadow-2xl overflow-hidden border border-slate-800">
 
         {/* Tabs */}
@@ -262,6 +262,26 @@ export const LoginPage = () => {
               </button>
             </form>
           )}
+        </div>
+      </div>
+
+      {/* Contact Admin Info Banner */}
+      <div className="w-full max-w-sm rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur px-4 py-3">
+        <div className="flex items-start gap-3">
+          <span className="text-amber-400 text-lg mt-0.5">🔒</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-300">No Sign-Up Available</p>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Contact admin for your login credentials.
+            </p>
+            <a
+              href="mailto:harshp14918@gmail.com"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors mt-2"
+            >
+              <span>✉️</span>
+              <span>harshp14918@gmail.com</span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
