@@ -447,9 +447,18 @@ export const AddCustomerModal = ({ open, onClose, onCreated }: Props) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-5 py-2 rounded-lg bg-primary text-black font-semibold text-sm disabled:opacity-60"
+                className="px-5 py-2 rounded-lg bg-primary hover:bg-[#15803d] text-white font-semibold text-sm disabled:opacity-60 flex items-center justify-center gap-2 min-w-[140px] transition-colors duration-150"
               >
-                {loading ? 'Saving…' : 'Save Customer'}
+                {loading ? (
+                  <>
+                    <span
+                      className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                    />
+                    Saving…
+                  </>
+                ) : (
+                  'Save Customer'
+                )}
               </button>
             </div>
           </form>
